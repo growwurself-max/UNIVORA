@@ -1,7 +1,7 @@
--- Univora Phase 2 - Migration 5
+-- Univora Phase 2 - Migration 2 of 3
 -- Student, Faculty & Academic Management: subjects, courses, faculty, students,
 -- classes (sections) and class enrollments, all institution-scoped with RLS.
--- Apply after 20261013000004_phase1_super_admin.sql. Idempotent; safe to re-run.
+-- Apply after 20261013000001_phase0_phase1_core.sql. Idempotent; safe to re-run.
 
 begin;
 

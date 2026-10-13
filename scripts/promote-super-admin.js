@@ -31,7 +31,7 @@ const fail = (message) => {
     fail(`Could not read roles: ${roleError.message}. Have the Phase 1 migrations been applied?`);
   }
   if (!superAdminRole) {
-    fail('The "super_admin" role does not exist. Apply supabase/migrations/20261013000004_phase1_super_admin.sql first.');
+    fail('The "super_admin" role does not exist. Apply supabase/migrations/20261013000001_phase0_phase1_core.sql first.');
   }
 
   const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers();

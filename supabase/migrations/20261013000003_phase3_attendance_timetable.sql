@@ -1,8 +1,8 @@
--- Univora Phase 3 - Migration 6
+-- Univora Phase 3 - Migration 3 of 3
 -- Attendance & Timetable: per-institution timetable entries (with conflict
 -- detection), attendance sessions + per-student records, and configurable
 -- low-attendance alerting. All institution-scoped with RLS.
--- Apply after 20261013000005_phase2_academics.sql. Idempotent; safe to re-run.
+-- Apply after 20261013000002_phase2_academics.sql. Idempotent; safe to re-run.
 
 begin;
 
