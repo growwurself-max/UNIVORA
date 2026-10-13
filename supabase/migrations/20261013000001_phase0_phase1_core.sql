@@ -203,7 +203,6 @@ create trigger univora_on_auth_user_created
 
 -- Trigger functions are invoked by the engine; no direct EXECUTE needed by app roles.
 revoke execute on function public.univora_handle_new_user() from public, anon, authenticated;
-revoke execute on function public.enforce_profile_privileges() from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Privilege escalation guard.
@@ -266,6 +265,8 @@ begin
   return new;
 end;
 $$;
+
+revoke execute on function public.enforce_profile_privileges() from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- NOTE: the definition above already incorporates the Phase 1 change that lets
