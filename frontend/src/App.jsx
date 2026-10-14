@@ -7,6 +7,8 @@ import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import AcademicManagement from './pages/AcademicManagement';
 import Timetable from './pages/Timetable';
 import Attendance from './pages/Attendance';
+import Exams from './pages/Exams';
+import Results from './pages/Results';
 
 function LoadingScreen() {
   return (
@@ -129,6 +131,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Attendance />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/exams"
+        element={
+          <ProtectedRoute>
+            <Exams />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/results"
+        element={
+          <ProtectedRoute>
+            <Results />
           </ProtectedRoute>
         }
       />

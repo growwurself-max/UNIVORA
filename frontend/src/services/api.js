@@ -62,6 +62,35 @@ export const attendanceAPI = {
   alerts: (params) => api.get('/attendance/alerts', { params }),
 };
 
+// Exams, exam types, configurable grading scales and student marks entry.
+export const examAPI = {
+  listTypes: (params) => api.get('/exams/types', { params }),
+  createType: (data) => api.post('/exams/types', data),
+  updateType: (id, data) => api.patch(`/exams/types/${id}`, data),
+  removeType: (id) => api.delete(`/exams/types/${id}`),
+
+  listGradingScales: (params) => api.get('/exams/grading-scales', { params }),
+  createGradingScale: (data) => api.post('/exams/grading-scales', data),
+  updateGradingScale: (id, data) => api.patch(`/exams/grading-scales/${id}`, data),
+  removeGradingScale: (id) => api.delete(`/exams/grading-scales/${id}`),
+
+  list: (params) => api.get('/exams', { params }),
+  get: (id) => api.get(`/exams/${id}`),
+  create: (data) => api.post('/exams', data),
+  update: (id, data) => api.patch(`/exams/${id}`, data),
+  remove: (id) => api.delete(`/exams/${id}`),
+
+  listMarks: (id) => api.get(`/exams/${id}/marks`),
+  saveMarks: (id, records) => api.post(`/exams/${id}/marks`, { records }),
+  results: (id) => api.get(`/exams/${id}/results`),
+};
+
+// Class-wise and student-wise results plus printable report cards.
+export const resultAPI = {
+  list: (params) => api.get('/results', { params }),
+  reportCard: (studentId, params) => api.get(`/results/report-card/${studentId}`, { params }),
+};
+
 // Super Admin institution management (all endpoints require the super_admin role)
 export const adminAPI = {
   listInstitutions: (params) => api.get('/institutions', { params }),

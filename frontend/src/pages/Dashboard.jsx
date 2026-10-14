@@ -19,6 +19,7 @@ import {
   X,
   Bell,
   Settings,
+  BarChart3,
 } from 'lucide-react';
 
 const menuItems = [
@@ -32,6 +33,8 @@ const menuItems = [
   { name: 'Enrollments', icon: ClipboardList, description: 'Enroll students in classes', path: '/academic/enrollments' },
   { name: 'Timetable', icon: CalendarClock, description: 'Weekly class schedules', path: '/timetable' },
   { name: 'Attendance', icon: CalendarCheck, description: 'Mark and review attendance', path: '/attendance' },
+  { name: 'Exams', icon: ClipboardList, description: 'Create exams and record marks', path: '/exams' },
+  { name: 'Results', icon: BarChart3, description: 'Class & student results and report cards', path: '/results' },
 ];
 
 const Dashboard = () => {
