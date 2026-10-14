@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
-import { BookOpen, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { BookOpen, Mail, Lock, AlertCircle, Loader2, Check } from 'lucide-react';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -54,23 +54,55 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-4">
-      <div className="max-w-md w-full">
-        {/* Logo and Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl mb-4 shadow-lg">
-            <BookOpen className="w-8 h-8 text-white" />
+    <div className="min-h-screen lg:grid lg:grid-cols-2">
+      {/* Brand panel */}
+      <div className="hidden lg:flex flex-col justify-between bg-primary-700 text-white p-12">
+        <div className="flex items-center">
+          <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+            <BookOpen className="w-6 h-6 text-white" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">
-            Welcome to Univora
-          </h2>
-          <p className="mt-2 text-gray-600">
-            Sign in to access your Education ERP dashboard
-          </p>
+          <span className="ml-3 text-xl font-bold">Univora</span>
         </div>
 
-        {/* Login Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+        <div className="max-w-md">
+          <h1 className="text-3xl font-bold leading-tight">
+            The complete Education ERP for modern institutions.
+          </h1>
+          <p className="mt-4 text-primary-100">
+            Manage academics, attendance, exams, fees and payroll from a single, secure platform.
+          </p>
+          <ul className="mt-8 space-y-3 text-sm text-primary-100">
+            {[
+              'Student, staff and academic records',
+              'Attendance, timetables and examinations',
+              'Fees, payments and payroll workflows',
+            ].map((item) => (
+              <li key={item} className="flex items-center">
+                <Check className="w-4 h-4 mr-3 text-primary-200" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="text-xs text-primary-200">© 2024 Univora Education ERP. All rights reserved.</p>
+      </div>
+
+      {/* Form panel */}
+      <div className="flex items-center justify-center px-4 py-12 bg-white">
+        <div className="w-full max-w-md">
+          <div className="lg:hidden flex flex-col items-center mb-8">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-primary-600 rounded-2xl mb-4 shadow-sm">
+              <BookOpen className="w-8 h-8 text-white" />
+            </div>
+            <span className="text-2xl font-bold text-gray-900">Univora</span>
+          </div>
+
+          <div className="mb-8 text-center lg:text-left">
+            <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
+            <p className="mt-1 text-sm text-gray-600">Sign in to access your dashboard</p>
+          </div>
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start">
@@ -95,7 +127,7 @@ const Login = () => {
                     required
                     value={formData.email}
                     onChange={handleChange}
-                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                     placeholder="you@example.com"
                   />
                 </div>
@@ -116,7 +148,7 @@ const Login = () => {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                     placeholder="••••••••"
                   />
                 </div>
@@ -126,57 +158,29 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
+              className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                'Sign in'
-              )}
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Sign in
             </button>
 
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">or</span>
-              </div>
-            </div>
-
-            {/* Demo Login Button */}
             <button
               type="button"
               onClick={handleDemoLogin}
               disabled={demoLoading}
-              className="w-full flex justify-center items-center py-2.5 px-4 border-2 border-green-300 rounded-lg text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-colors"
             >
-              {demoLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Setting up demo...
-                </>
-              ) : (
-                '🎮 Demo Login (Development Only)'
-              )}
+              {demoLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Try the demo account
             </button>
 
-            <div className="text-center pt-2">
-              <Link to="/register" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            <div className="pt-1 text-center lg:text-left">
+              <Link to="/register" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
                 Don't have an account? <span className="underline">Sign up</span>
               </Link>
             </div>
           </form>
         </div>
-
-        {/* Footer */}
-        <p className="mt-8 text-center text-xs text-gray-500">
-          © 2024 Univora Education ERP. All rights reserved.
-        </p>
       </div>
     </div>
   );

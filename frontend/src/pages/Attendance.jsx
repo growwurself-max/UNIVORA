@@ -1,13 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { academicAPI, attendanceAPI } from '../services/api';
 import {
-  BookOpen,
-  CalendarClock,
   CalendarCheck,
-  LayoutDashboard,
-  LogOut,
   Loader2,
   X,
   AlertCircle,
@@ -47,8 +42,7 @@ const StatusPill = ({ value }) => (
 );
 
 const Attendance = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const role = user?.profile?.role;
   const isAdmin = ADMIN_ROLES.includes(role);
   const isStaff = STAFF_ROLES.includes(role);
@@ -100,11 +94,6 @@ const Attendance = () => {
       .then((r) => setSettings(r.data.data))
       .catch(() => {});
   }, []);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   const classLabel = (row) => (row.section ? `${row.name} (${row.section})` : row.name);
   const studentLabel = (row) =>
@@ -283,35 +272,7 @@ const Attendance = () => {
     'block w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-white" />
-            </div>
-            <span className="ml-3 text-xl font-bold text-gray-900">Univora</span>
-          </div>
-          <nav className="hidden sm:flex items-center gap-1">
-            <Link to="/dashboard" className="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 flex items-center">
-              <LayoutDashboard className="w-4 h-4 mr-2" />
-              Dashboard
-            </Link>
-            <Link to="/timetable" className="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 flex items-center">
-              <CalendarClock className="w-4 h-4 mr-2" />
-              Timetable
-            </Link>
-            <span className="px-3 py-2 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 flex items-center">
-              <CalendarCheck className="w-4 h-4 mr-2" />
-              Attendance
-            </span>
-          </nav>
-          <button onClick={handleLogout} className="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">
-            <LogOut className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Logout</span>
-          </button>
-        </div>
-      </header>
+    <div className="bg-slate-50">
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-start gap-3 mb-6">

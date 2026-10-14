@@ -1,13 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { academicAPI, examAPI } from '../services/api';
 import {
-  BookOpen,
-  CalendarClock,
-  CalendarCheck,
-  LayoutDashboard,
-  LogOut,
   Plus,
   Pencil,
   Trash2,
@@ -21,7 +15,6 @@ import {
   Scale,
   ListChecks,
   ClipboardList,
-  BarChart3,
 } from 'lucide-react';
 
 const ADMIN_ROLES = ['owner', 'admin', 'super_admin'];
@@ -86,8 +79,7 @@ const studentLabel = (row) =>
   `${row.admission_number || ''} — ${[row.first_name, row.last_name].filter(Boolean).join(' ')}`.trim();
 
 const Exams = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const role = user?.profile?.role;
   const isAdmin = ADMIN_ROLES.includes(role);
   const isStaff = STAFF_ROLES.includes(role);
@@ -210,11 +202,6 @@ const Exams = () => {
     if (tab === 'grading') loadScales();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   // ---- Exams CRUD ----
   const openCreateExam = () => {
@@ -518,44 +505,7 @@ const Exams = () => {
   const visibleExams = useMemo(() => exams, [exams]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-white" />
-            </div>
-            <span className="ml-3 text-xl font-bold text-gray-900">Univora</span>
-          </div>
-          <nav className="hidden sm:flex items-center gap-1">
-            <Link to="/dashboard" className="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 flex items-center">
-              <LayoutDashboard className="w-4 h-4 mr-2" />
-              Dashboard
-            </Link>
-            <Link to="/timetable" className="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 flex items-center">
-              <CalendarClock className="w-4 h-4 mr-2" />
-              Timetable
-            </Link>
-            <Link to="/attendance" className="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 flex items-center">
-              <CalendarCheck className="w-4 h-4 mr-2" />
-              Attendance
-            </Link>
-            <Link to="/results" className="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 flex items-center">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Results
-            </Link>
-            <span className="px-3 py-2 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 flex items-center">
-              <ClipboardList className="w-4 h-4 mr-2" />
-              Exams
-            </span>
-          </nav>
-          <button onClick={handleLogout} className="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">
-            <LogOut className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Logout</span>
-          </button>
-        </div>
-      </header>
-
+    <div className="bg-slate-50">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div className="flex items-start gap-3">

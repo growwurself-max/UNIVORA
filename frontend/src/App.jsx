@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import AppLayout from './components/AppLayout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -9,6 +10,11 @@ import Timetable from './pages/Timetable';
 import Attendance from './pages/Attendance';
 import Exams from './pages/Exams';
 import Results from './pages/Results';
+import Fees from './pages/Fees';
+import Payments from './pages/Payments';
+import FeeDashboard from './pages/FeeDashboard';
+import Payroll from './pages/Payroll';
+import Reports from './pages/Reports';
 
 function LoadingScreen() {
   return (
@@ -53,6 +59,26 @@ function AdminRoute({ children }) {
   return children;
 }
 
+const ADMIN_ROLES = ['owner', 'admin', 'super_admin'];
+
+function InstitutionAdminRoute({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  if (!ADMIN_ROLES.includes(user.profile?.role)) {
+    return <Navigate to="/dashboard" />;
+  }
+
+  return children;
+}
+
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
 
@@ -70,86 +96,25 @@ function PublicRoute({ children }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <Login />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <PublicRoute>
-            <Register />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin"
-        element={
-          <AdminRoute>
-            <SuperAdminDashboard />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/academic"
-        element={
-          <ProtectedRoute>
-            <AcademicManagement />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/academic/:resource"
-        element={
-          <ProtectedRoute>
-            <AcademicManagement />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/timetable"
-        element={
-          <ProtectedRoute>
-            <Timetable />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/attendance"
-        element={
-          <ProtectedRoute>
-            <Attendance />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/exams"
-        element={
-          <ProtectedRoute>
-            <Exams />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/results"
-        element={
-          <ProtectedRoute>
-            <Results />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+
+      <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/academic" element={<AcademicManagement />} />
+        <Route path="/academic/:resource" element={<AcademicManagement />} />
+        <Route path="/timetable" element={<Timetable />} />
+        <Route path="/attendance" element={<Attendance />} />
+        <Route path="/exams" element={<Exams />} />
+        <Route path="/results" element={<Results />} />
+        <Route path="/fees" element={<Fees />} />
+        <Route path="/fees/dashboard" element={<FeeDashboard />} />
+        <Route path="/payments" element={<Payments />} />
+        <Route path="/payroll" element={<InstitutionAdminRoute><Payroll /></InstitutionAdminRoute>} />
+        <Route path="/reports" element={<Reports />} />
+      </Route>
+
+      <Route path="/admin" element={<AdminRoute><SuperAdminDashboard /></AdminRoute>} />
       <Route path="/" element={<Navigate to="/login" />} />
     </Routes>
   );
