@@ -91,6 +91,60 @@ export const resultAPI = {
   reportCard: (studentId, params) => api.get(`/results/report-card/${studentId}`, { params }),
 };
 
+// Fee types, fee structures, per-student assignments, dashboard and reports.
+export const feeAPI = {
+  listTypes: (params) => api.get('/fees/types', { params }),
+  createType: (data) => api.post('/fees/types', data),
+  updateType: (id, data) => api.patch(`/fees/types/${id}`, data),
+  removeType: (id) => api.delete(`/fees/types/${id}`),
+
+  listStructures: (params) => api.get('/fees/structures', { params }),
+  createStructure: (data) => api.post('/fees/structures', data),
+  updateStructure: (id, data) => api.patch(`/fees/structures/${id}`, data),
+  removeStructure: (id) => api.delete(`/fees/structures/${id}`),
+
+  listAssignments: (params) => api.get('/fees/assignments', { params }),
+  getAssignment: (id) => api.get(`/fees/assignments/${id}`),
+  createAssignment: (data) => api.post('/fees/assignments', data),
+  bulkAssign: (data) => api.post('/fees/assignments/bulk', data),
+  updateAssignment: (id, data) => api.patch(`/fees/assignments/${id}`, data),
+  removeAssignment: (id) => api.delete(`/fees/assignments/${id}`),
+
+  dashboard: (params) => api.get('/fees/dashboard', { params }),
+  studentHistory: (studentId) => api.get(`/fees/students/${studentId}`),
+  collectionsReport: (params) => api.get('/fees/reports/collections', { params }),
+  outstandingReport: (params) => api.get('/fees/reports/outstanding', { params }),
+};
+
+// Fee payments and printable/downloadable receipts.
+export const paymentAPI = {
+  list: (params) => api.get('/payments', { params }),
+  get: (id) => api.get(`/payments/${id}`),
+  create: (data) => api.post('/payments', data),
+  remove: (id) => api.delete(`/payments/${id}`),
+  receipt: (id) => api.get(`/payments/${id}/receipt`),
+};
+
+// Salary structures, payroll runs/records and monthly payroll reports.
+export const payrollAPI = {
+  listStructures: (params) => api.get('/payroll/structures', { params }),
+  createStructure: (data) => api.post('/payroll/structures', data),
+  updateStructure: (id, data) => api.patch(`/payroll/structures/${id}`, data),
+  removeStructure: (id) => api.delete(`/payroll/structures/${id}`),
+
+  listRuns: (params) => api.get('/payroll/runs', { params }),
+  createRun: (data) => api.post('/payroll/runs', data),
+  getRun: (id) => api.get(`/payroll/runs/${id}`),
+  updateRun: (id, data) => api.patch(`/payroll/runs/${id}`, data),
+  removeRun: (id) => api.delete(`/payroll/runs/${id}`),
+  generateRun: (id) => api.post(`/payroll/runs/${id}/generate`),
+
+  updateRecord: (id, data) => api.patch(`/payroll/records/${id}`, data),
+  removeRecord: (id) => api.delete(`/payroll/records/${id}`),
+
+  monthlyReport: (params) => api.get('/payroll/reports/monthly', { params }),
+};
+
 // Super Admin institution management (all endpoints require the super_admin role)
 export const adminAPI = {
   listInstitutions: (params) => api.get('/institutions', { params }),

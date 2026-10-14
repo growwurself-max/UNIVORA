@@ -106,6 +106,15 @@ const normalizeFields = (resource, payload, { partial }) => {
         changes[key] = String(raw).trim();
         break;
       }
+      case 'datetime': {
+        const parsed = new Date(raw);
+        if (Number.isNaN(parsed.getTime())) {
+          fail(key, `${key} must be a valid date/time`);
+          break;
+        }
+        changes[key] = parsed.toISOString();
+        break;
+      }
       case 'time': {
         const value = String(raw).trim();
         if (!TIME_RE.test(value)) {
