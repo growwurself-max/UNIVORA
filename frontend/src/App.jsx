@@ -132,6 +132,8 @@ function HomeRoute() {
 }
 
 function AppRoutes() {
+  const { user, loading } = useAuth();
+
   return (
     <>
       <Routes>
@@ -157,7 +159,7 @@ function AppRoutes() {
         <Route path="/admin" element={<AdminRoute><SuperAdminDashboard /></AdminRoute>} />
         <Route path="/" element={<HomeRoute />} />
       </Routes>
-      <AIChatBot />
+      {!loading && user && <AIChatBot />}
     </>
   );
 }
