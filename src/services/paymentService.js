@@ -144,14 +144,6 @@ const recordPayment = async ({ accessToken, payload, actorId }) => {
   return attachFinanceStudents(supabase, data);
 };
 
-const removePayment = async ({ accessToken, id }) => {
-  const supabase = createUserClient(accessToken);
-  const before = await paymentDetail({ accessToken, id });
-  const { error } = await supabase.from(PAYMENTS.table).delete().eq('id', id);
-  if (error) throw error;
-  return before;
-};
-
 // ---------------------------------------------------------------------------
 // Receipt payload for print/download.
 // ---------------------------------------------------------------------------
@@ -199,7 +191,6 @@ module.exports = {
   listPayments,
   paymentDetail,
   recordPayment,
-  removePayment,
   receipt,
   UUID_RE,
 };

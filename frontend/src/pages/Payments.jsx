@@ -9,7 +9,6 @@ import {
   AlertCircle,
   Inbox,
   RefreshCw,
-  Trash2,
   Printer,
   Search,
 } from 'lucide-react';
@@ -134,18 +133,6 @@ const Payments = () => {
       setError(apiError(err));
     } finally {
       setSaving(false);
-    }
-  };
-
-  const voidPayment = async (row) => {
-    setError('');
-    setNotice('');
-    try {
-      await paymentAPI.remove(row.id);
-      setNotice('Payment voided');
-      await loadPayments();
-    } catch (err) {
-      setError(apiError(err));
     }
   };
 
@@ -294,9 +281,6 @@ const Payments = () => {
                         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{row.paid_at ? new Date(row.paid_at).toLocaleDateString() : '—'}</td>
                         <td className="px-4 py-3 text-right whitespace-nowrap">
                           <button onClick={() => printReceipt(row)} className="p-1.5 rounded hover:bg-gray-100 text-gray-600" title="Print receipt"><Printer className="w-4 h-4" /></button>
-                          {isAdmin && (
-                            <button onClick={() => voidPayment(row)} className="p-1.5 rounded hover:bg-red-50 text-red-500" title="Void payment"><Trash2 className="w-4 h-4" /></button>
-                          )}
                         </td>
                       </tr>
                     ))}

@@ -170,7 +170,6 @@ export const paymentAPI = {
   list: (params) => api.get('/payments', { params }),
   get: (id) => api.get(`/payments/${id}`),
   create: (data) => api.post('/payments', data),
-  remove: (id) => api.delete(`/payments/${id}`),
   receipt: (id) => api.get(`/payments/${id}/receipt`),
 };
 

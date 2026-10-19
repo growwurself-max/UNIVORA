@@ -14,6 +14,5 @@ router.get('/', paymentController.listPayments);
 router.post('/', requireAdmin, paymentController.createPayment);
 router.get('/:id', paymentController.paymentDetail);
 router.get('/:id/receipt', paymentController.receipt);
-router.delete('/:id', requireAdmin, paymentController.removePayment);
 
 module.exports = router;
