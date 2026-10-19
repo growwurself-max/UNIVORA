@@ -10,6 +10,11 @@ const resultRoutes = require('./resultRoutes');
 const feeRoutes = require('./feeRoutes');
 const paymentRoutes = require('./paymentRoutes');
 const payrollRoutes = require('./payrollRoutes');
+const notificationRoutes = require('./notificationRoutes');
+const reportRoutes = require('./reportRoutes');
+const settingsRoutes = require('./settingsRoutes');
+const aiRoutes = require('./aiRoutes');
+const staffRoutes = require('./staffRoutes');
 
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
@@ -22,5 +27,10 @@ router.use('/results', resultRoutes);
 router.use('/fees', feeRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/payroll', payrollRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/reports', reportRoutes);
+router.use('/settings', settingsRoutes);
+router.use('/ai', aiRoutes);
+router.use('/staff', staffRoutes);
 
 module.exports = router;

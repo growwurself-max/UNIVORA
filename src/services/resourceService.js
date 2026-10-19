@@ -294,7 +294,8 @@ const getStats = async ({ accessToken }) => {
       const { count, error } = await supabase
         .from(table)
         .select('id', { count: 'exact', head: true });
-      return [table, error ? 0 : count || 0];
+      if (error) throw error;
+      return [table, count || 0];
     })
   );
 

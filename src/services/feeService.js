@@ -1,5 +1,5 @@
 const ApiError = require('../utils/ApiError');
-const { createUserClient } = require('../config/supabase');
+const { createUserClient, supabaseAdmin } = require('../config/supabase');
 const { normalizeFields, sanitizeSearch, parseListParams } = require('./resourceService');
 const {
   FEE_TYPES,
@@ -22,6 +22,37 @@ const assertUuid = (value, field) => {
 };
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
+
+const listStudentsForFees = async ({ institutionId, query = {} }) => {
+  if (!institutionId) throw new ApiError(403, 'Your account is not associated with an institution');
+
+  const { page, limit } = parseListParams(query);
+  let builder = supabaseAdmin
+    .from('students')
+    .select('id, admission_number, first_name, last_name, status', { count: 'exact' })
+    .eq('institution_id', institutionId);
+
+  const term = sanitizeSearch(query.search);
+  if (term) {
+    builder = builder.or(
+      `admission_number.ilike.%${term}%,first_name.ilike.%${term}%,last_name.ilike.%${term}%`
+    );
+  }
+
+  const { data, error, count } = await builder
+    .order('last_name', { ascending: true })
+    .order('first_name', { ascending: true })
+    .range((page - 1) * limit, page * limit - 1);
+
+  if (error) throw error;
+  return {
+    items: data || [],
+    total: count || 0,
+    page,
+    limit,
+    totalPages: Math.max(1, Math.ceil((count || 0) / limit)),
+  };
+};
 
 // ---------------------------------------------------------------------------
 // Shared RLS-scoped helpers (mirror the exam service).
@@ -165,17 +196,38 @@ const removeFeeStructure = async ({ accessToken, id }) => {
   return removeResource(supabase, FEE_STRUCTURES, id, 'Fee structure not found');
 };
 
+const attachFinanceStudents = async (supabase, records) => {
+  const wasArray = Array.isArray(records);
+  const items = wasArray ? records : records ? [records] : [];
+  const studentIds = [...new Set(items.map((record) => record.student_id).filter(Boolean))];
+  if (studentIds.length === 0) return records;
+
+  const { data, error } = await supabase.rpc('univora_finance_student_directory', {
+    p_student_ids: studentIds,
+  });
+  if (error) throw error;
+
+  const students = new Map((data || []).map((student) => [student.id, student]));
+  const enriched = items.map((record) => ({
+    ...record,
+    student: students.get(record.student_id) || null,
+  }));
+  return wasArray ? enriched : enriched[0];
+};
+
 // ---------------------------------------------------------------------------
 // Student fee assignments
 // ---------------------------------------------------------------------------
 const listAssignments = async ({ accessToken, query }) => {
   const supabase = createUserClient(accessToken);
-  return listResource(supabase, STUDENT_FEES, query);
+  const result = await listResource(supabase, STUDENT_FEES, query);
+  return { ...result, items: await attachFinanceStudents(supabase, result.items) };
 };
 
 const assignmentDetail = async ({ accessToken, id }) => {
   const supabase = createUserClient(accessToken);
-  return resourceDetail(supabase, STUDENT_FEES, id, 'Fee assignment not found');
+  const record = await resourceDetail(supabase, STUDENT_FEES, id, 'Fee assignment not found');
+  return attachFinanceStudents(supabase, record);
 };
 
 // Fills in amount/year/due-date defaults from the referenced fee structure so a
@@ -211,7 +263,7 @@ const createAssignment = async ({ accessToken, payload }) => {
     .single();
 
   if (error) throw error;
-  return data;
+  return attachFinanceStudents(supabase, data);
 };
 
 const updateAssignment = async ({ accessToken, id, payload }) => {
@@ -219,7 +271,10 @@ const updateAssignment = async ({ accessToken, id, payload }) => {
   const before = await resourceDetail(supabase, STUDENT_FEES, id, 'Fee assignment not found');
   const changes = normalizeFields(STUDENT_FEES, payload, { partial: true });
 
-  if (Object.keys(changes).length === 0) return { before, after: before, changes };
+  if (Object.keys(changes).length === 0) {
+    const [record] = await attachFinanceStudents(supabase, [before]);
+    return { before: record, after: record, changes };
+  }
 
   const { data: after, error } = await supabase
     .from(STUDENT_FEES.table)
@@ -229,12 +284,16 @@ const updateAssignment = async ({ accessToken, id, payload }) => {
     .single();
 
   if (error) throw error;
-  return { before, after, changes };
+  const [enrichedBefore, enrichedAfter] = await attachFinanceStudents(supabase, [before, after]);
+  return { before: enrichedBefore, after: enrichedAfter, changes };
 };
 
 const removeAssignment = async ({ accessToken, id }) => {
   const supabase = createUserClient(accessToken);
-  return removeResource(supabase, STUDENT_FEES, id, 'Fee assignment not found');
+  const before = await resourceDetail(supabase, STUDENT_FEES, id, 'Fee assignment not found');
+  const record = await attachFinanceStudents(supabase, before);
+  await removeResource(supabase, STUDENT_FEES, id, 'Fee assignment not found');
+  return record;
 };
 
 // Assigns one fee structure to many students. When no student_ids are supplied,
@@ -297,7 +356,7 @@ const bulkAssign = async ({ accessToken, payload }) => {
     .select(STUDENT_FEES.select);
 
   if (error) throw error;
-  return data || [];
+  return attachFinanceStudents(supabase, data || []);
 };
 
 // ---------------------------------------------------------------------------
@@ -366,21 +425,16 @@ const studentFeeHistory = async ({ accessToken, studentId }) => {
   assertUuid(studentId, 'student_id');
   const supabase = createUserClient(accessToken);
 
-  const { data: student, error: studentError } = await supabase
-    .from('students')
-    .select('id, admission_number, first_name, last_name')
-    .eq('id', studentId)
-    .maybeSingle();
-
-  if (studentError) throw studentError;
+  const [student] = await attachFinanceStudents(supabase, [{ student_id: studentId }]);
   if (!student) throw new ApiError(404, 'Student not found');
 
-  const { data: fees, error: feeError } = await supabase
+  const { data: feeRows, error: feeError } = await supabase
     .from(STUDENT_FEES.table)
     .select(STUDENT_FEES.select)
     .eq('student_id', studentId)
     .order('created_at', { ascending: true });
   if (feeError) throw feeError;
+  const fees = await attachFinanceStudents(supabase, feeRows || []);
 
   const { data: payments, error: paymentError } = await supabase
     .from('payments')
@@ -427,7 +481,7 @@ const collectionsReport = async ({ accessToken, query = {} }) => {
   let builder = supabase
     .from('payments')
     .select(
-      'id, amount, method, reference, receipt_number, paid_at, ' +
+      'id, student_id, amount, method, reference, receipt_number, paid_at, ' +
         'student:students!student_id ( id, admission_number, first_name, last_name ), ' +
         'student_fee:student_fees!student_fee_id ( id, fee_structure_id, ' +
         'fee_structure:fee_structures!fee_structure_id ( id, class_id, fee_type_id, ' +
@@ -442,12 +496,13 @@ const collectionsReport = async ({ accessToken, query = {} }) => {
   const { data, error } = await builder.order('paid_at', { ascending: true });
   if (error) throw error;
 
-  const payments = (data || []).filter((payment) => {
+  const filteredPayments = (data || []).filter((payment) => {
     const structure = payment.student_fee?.fee_structure;
     if (query.class_id && structure?.class_id !== query.class_id) return false;
     if (query.fee_type_id && structure?.fee_type_id !== query.fee_type_id) return false;
     return true;
   });
+  const payments = await attachFinanceStudents(supabase, filteredPayments);
 
   const byDate = new Map();
   let total = 0;
@@ -507,10 +562,11 @@ const outstandingReport = async ({ accessToken, query = {} }) => {
       ),
     }));
 
-  const total = rows.reduce((sum, fee) => sum + toNumber(fee.outstanding), 0);
+  const enrichedRows = await attachFinanceStudents(supabase, rows);
+  const total = enrichedRows.reduce((sum, fee) => sum + toNumber(fee.outstanding), 0);
 
   return {
-    students: rows,
+    students: enrichedRows,
     total_outstanding: round2(total),
     count: rows.length,
     generated_at: new Date().toISOString(),
@@ -518,6 +574,7 @@ const outstandingReport = async ({ accessToken, query = {} }) => {
 };
 
 module.exports = {
+  listStudentsForFees,
   listFeeTypes,
   createFeeType,
   updateFeeType,
@@ -539,5 +596,6 @@ module.exports = {
   round2,
   toNumber,
   assertUuid,
+  attachFinanceStudents,
   ZERO_UUID,
 };

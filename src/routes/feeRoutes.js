@@ -1,12 +1,12 @@
 const express = require('express');
 const feeController = require('../controllers/feeController');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, requireAccountant } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Fee types, structures and assignments are financial configuration and are
 // managed by institution admins; reads are open to members (RLS-scoped).
-const requireAdmin = authorize('owner', 'admin', 'super_admin');
+const requireAdmin = requireAccountant;
 
 router.use(authenticate);
 
@@ -23,6 +23,7 @@ router.patch('/structures/:id', requireAdmin, feeController.updateStructure);
 router.delete('/structures/:id', requireAdmin, feeController.removeStructure);
 
 // Student fee assignments
+router.get('/students', requireAdmin, feeController.listStudents);
 router.get('/assignments', feeController.listAssignments);
 router.post('/assignments', requireAdmin, feeController.createAssignment);
 router.post('/assignments/bulk', requireAdmin, feeController.bulkAssign);

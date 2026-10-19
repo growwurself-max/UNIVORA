@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -24,9 +24,57 @@ api.interceptors.request.use(
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
+  refresh: (data) => api.post('/auth/refresh', data),
+  logout: () => api.post('/auth/logout'),
   getProfile: () => api.get('/auth/me'),
   setupDemoUser: () => api.post('/auth/demo/setup'),
 };
+
+let refreshInFlight = null;
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const request = error.config;
+    const authEndpoint = /\/auth\/(login|register|refresh|logout)(\?|$)/.test(request?.url || '');
+    if (error.response?.status !== 401 || !request || request._retried || authEndpoint) {
+      return Promise.reject(error);
+    }
+
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) {
+      localStorage.removeItem('accessToken');
+      window.dispatchEvent(new Event('univora:auth-expired'));
+      return Promise.reject(error);
+    }
+
+    request._retried = true;
+    if (!refreshInFlight) {
+      refreshInFlight = authAPI.refresh({ refreshToken })
+        .then((response) => {
+          const { session } = response.data.data;
+          localStorage.setItem('accessToken', session.accessToken);
+          localStorage.setItem('refreshToken', session.refreshToken);
+          return session.accessToken;
+        })
+        .finally(() => {
+          refreshInFlight = null;
+        });
+    }
+
+    try {
+      const accessToken = await refreshInFlight;
+      request.headers = request.headers || {};
+      request.headers.Authorization = `Bearer ${accessToken}`;
+      return api(request);
+    } catch (refreshError) {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      window.dispatchEvent(new Event('univora:auth-expired'));
+      return Promise.reject(refreshError);
+    }
+  }
+);
 
 // Institution-scoped academic resources (students, faculty, departments, ...).
 // Reads are available to every authenticated member; writes require an admin role.
@@ -93,6 +141,7 @@ export const resultAPI = {
 
 // Fee types, fee structures, per-student assignments, dashboard and reports.
 export const feeAPI = {
+  students: (params) => api.get('/fees/students', { params }),
   listTypes: (params) => api.get('/fees/types', { params }),
   createType: (data) => api.post('/fees/types', data),
   updateType: (id, data) => api.patch(`/fees/types/${id}`, data),
@@ -127,6 +176,7 @@ export const paymentAPI = {
 
 // Salary structures, payroll runs/records and monthly payroll reports.
 export const payrollAPI = {
+  listEmployees: () => api.get('/payroll/employees'),
   listStructures: (params) => api.get('/payroll/structures', { params }),
   createStructure: (data) => api.post('/payroll/structures', data),
   updateStructure: (id, data) => api.patch(`/payroll/structures/${id}`, data),
@@ -146,6 +196,39 @@ export const payrollAPI = {
 };
 
 // Super Admin institution management (all endpoints require the super_admin role)
+export const notificationAPI = {
+  list: (params) => api.get('/notifications', { params }),
+  markRead: (id) => api.patch(`/notifications/${id}/read`),
+  create: (data) => api.post('/notifications', data),
+  remove: (id) => api.delete(`/notifications/${id}`),
+};
+
+export const reportsAPI = {
+  students: () => api.get('/reports/students'),
+  faculty: () => api.get('/reports/faculty'),
+  attendance: (params) => api.get('/reports/attendance', { params }),
+  examsResults: (params) => api.get('/reports/exams-results', { params }),
+  collections: (params) => api.get('/fees/reports/collections', { params }),
+  outstanding: (params) => api.get('/fees/reports/outstanding', { params }),
+  payroll: (params) => api.get('/payroll/reports/monthly', { params }),
+};
+
+export const settingsAPI = {
+  institutionGet: () => api.get('/settings/institution'),
+  institutionUpsert: (data) => api.put('/settings/institution', data),
+  prefsGet: () => api.get('/settings/preferences'),
+  prefsUpsert: (data) => api.put('/settings/preferences', data),
+};
+
+export const staffAPI = {
+  list: (params) => api.get('/staff', { params }),
+  roles: () => api.get('/staff/roles'),
+  create: (data) => api.post('/staff', data),
+  update: (id, data) => api.patch(`/staff/${id}`, data),
+  assign: (data) => api.post('/staff/assignments', data),
+  removeAssignment: (id) => api.delete(`/staff/assignments/${id}`),
+};
+
 export const adminAPI = {
   listInstitutions: (params) => api.get('/institutions', { params }),
   getStats: () => api.get('/institutions/stats'),
@@ -154,6 +237,11 @@ export const adminAPI = {
   updateInstitution: (id, data) => api.patch(`/institutions/${id}`, data),
   setInstitutionStatus: (id, status, reason) =>
     api.patch(`/institutions/${id}/status`, { status, reason }),
+};
+
+// ... existing exports ...
+export const aiAPI = {
+  chat: (data) => api.post('/ai/chat', data),
 };
 
 export default api;

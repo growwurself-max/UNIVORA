@@ -16,6 +16,14 @@ const audit = (req, action, entityType, entityId, { oldValue, newValue, metadata
   });
 
 // ---------------------------------------------------------------------------
+// Employees (faculty + staff) available for salary structures
+// ---------------------------------------------------------------------------
+const listEmployees = asyncHandler(async (req, res) => {
+  const result = await payrollService.listEmployees({ accessToken: req.accessToken });
+  res.status(200).json(new ApiResponse(200, 'Payroll employees retrieved', result));
+});
+
+// ---------------------------------------------------------------------------
 // Salary structures
 // ---------------------------------------------------------------------------
 const listStructures = asyncHandler(async (req, res) => {
@@ -132,6 +140,7 @@ const monthlyReport = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  listEmployees,
   listStructures,
   createStructure,
   updateStructure,

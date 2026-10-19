@@ -461,7 +461,8 @@ drop trigger if exists univora_salary_structures_same_institution on public.sala
 create trigger univora_salary_structures_same_institution
   after insert or update on public.salary_structures
   for each row execute function public.univora_enforce_same_institution(
-    'faculty_id', 'faculty'
+    'faculty_id', 'faculty',
+    'profile_id', 'profiles'
   );
 
 drop trigger if exists univora_salary_components_same_institution on public.salary_components;
@@ -476,7 +477,8 @@ create trigger univora_payroll_records_same_institution
   after insert or update on public.payroll_records
   for each row execute function public.univora_enforce_same_institution(
     'payroll_run_id', 'payroll_runs',
-    'faculty_id', 'faculty'
+    'faculty_id', 'faculty',
+    'profile_id', 'profiles'
   );
 
 -- ---------------------------------------------------------------------------
@@ -595,5 +597,14 @@ grant select, insert, update, delete on public.salary_structures to authenticate
 grant select, insert, update, delete on public.salary_components to authenticated;
 grant select, insert, update, delete on public.payroll_runs to authenticated;
 grant select, insert, update, delete on public.payroll_records to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Policy helper functions used inside RLS policies must be executable by the
+-- role the policies apply to. Phase 3/4 revoked EXECUTE from authenticated,
+-- which makes every policy that references these helpers fail with
+-- "permission denied for function ...". Grant it back explicitly.
+-- ---------------------------------------------------------------------------
+grant execute on function public.is_staff() to authenticated;
+grant execute on function public.univora_is_own_student(uuid) to authenticated;
 
 commit;

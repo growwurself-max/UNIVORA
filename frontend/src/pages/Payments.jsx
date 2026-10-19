@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { academicAPI, feeAPI, paymentAPI } from '../services/api';
+import { feeAPI, paymentAPI } from '../services/api';
 import { inputClass, apiError, money, today, escapeHtml, printHtml } from '../utils/helpers';
 import {
   CreditCard,
@@ -14,7 +14,7 @@ import {
   Search,
 } from 'lucide-react';
 
-const ADMIN_ROLES = ['owner', 'admin', 'super_admin'];
+const ADMIN_ROLES = ['owner', 'admin', 'super_admin', 'staff', 'accountant'];
 const METHODS = ['cash', 'bank_transfer', 'card', 'cheque', 'online', 'other'];
 
 const studentLabel = (row) =>
@@ -48,7 +48,7 @@ const Payments = () => {
 
   const loadStudents = async () => {
     try {
-      const response = await academicAPI.list('students', { limit: 100 });
+      const response = await feeAPI.students({ limit: 100 });
       setStudents(response.data.data.items || []);
     } catch {
       setStudents([]);

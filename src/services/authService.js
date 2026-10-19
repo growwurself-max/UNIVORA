@@ -1,5 +1,6 @@
 const ApiError = require('../utils/ApiError');
 const { supabase, supabaseAdmin } = require('../config/supabase');
+const { createClient } = require('@supabase/supabase-js');
 const env = require('../config/env');
 
 const buildAuthResponse = (data) => ({
@@ -25,7 +26,6 @@ const register = async ({ email, password, name }) => {
       data: {
         name,
       },
-      emailConfirm: !env.isProduction, // Skip email confirmation in development
     },
   });
 
@@ -59,6 +59,29 @@ const login = async ({ email, password }) => {
   return withProfile(buildAuthResponse(data));
 };
 
+const refreshSession = async (refreshToken) => {
+  const authClient = createClient(env.supabaseUrl, env.supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+  const { data, error } = await authClient.auth.refreshSession({ refresh_token: refreshToken });
+
+  if (error || !data?.user || !data?.session) {
+    throw new ApiError(401, 'Session expired. Please sign in again.');
+  }
+
+  return withProfile(buildAuthResponse(data));
+};
+
+const logout = async (accessToken) => {
+  const { error } = await supabaseAdmin.auth.admin.signOut(accessToken, 'local');
+  if (error) {
+    throw new ApiError(502, 'Unable to revoke the current session. Please try again.');
+  }
+};
+
 const PROFILE_SELECT =
   'institution_id, full_name, is_demo, roles ( name ), institutions ( id, name, slug )';
 
@@ -85,11 +108,13 @@ const getProfile = async (userId) => {
     .maybeSingle();
 
   if (profileError) {
-    // Tolerate a pre-migration database so auth keeps working.
-    if (!isMissingSchemaError(profileError)) {
-      console.error('Failed to load profile:', profileError.message);
-    }
-  } else if (profileRow) {
+    const message = isMissingSchemaError(profileError)
+      ? 'Role data is not configured. Apply the Supabase database migrations before signing in.'
+      : 'Unable to load your account role. Please try again later.';
+    throw new ApiError(503, message);
+  }
+
+  if (profileRow) {
     profile = {
       fullName: profileRow.full_name,
       isDemo: profileRow.is_demo,
@@ -125,43 +150,37 @@ const verifyToken = async (token) => {
   return user;
 };
 
-// Returns the caller's current role name (or null pre-migration / no profile).
-// The role is read server-side from their own profile row, never from client input.
-const getRole = async (userId) => {
+const getAuthorizationProfile = async (userId) => {
   const { data, error } = await supabaseAdmin
     .from('profiles')
-    .select('roles ( name )')
+    .select('institution_id, roles(name)')
     .eq('id', userId)
     .maybeSingle();
 
-  if (error || !data) {
-    return null;
+  if (error) {
+    throw new ApiError(503, 'Unable to load your account permissions. Please try again later.');
   }
 
-  return data.roles?.name ?? null;
+  if (!data) return null;
+
+  return {
+    institution_id: data.institution_id,
+    role: data.roles?.name ?? null,
+  };
 };
 
 // Augments a sign-in/sign-up response with the caller's profile so the frontend
 // can render role-aware views immediately after login.
 const withProfile = async (authResponse) => {
-  try {
-    const profile = await getProfile(authResponse.user.id);
-    authResponse.user.profile = profile.profile;
-  } catch (error) {
-    if (!isMissingSchemaError(error)) {
-      console.error('Failed to attach profile to auth response:', error.message);
-    }
-    authResponse.user.profile = null;
-  }
+  const profile = await getProfile(authResponse.user.id);
+  authResponse.user.profile = profile.profile;
   return authResponse;
 };
 
-const DEMO_EMAIL = 'demo@univora.dev';
-const DEMO_PASSWORD = 'demo123';
 const DEMO_NAME = 'Demo User';
 const DEMO_INSTITUTION_SLUG = 'demo';
 
-// Assigns the demo account to a dedicated demo institution with the owner role.
+// Assigns the demo account to a dedicated demo institution with the admin role.
 // Runs with the service-role key so it bypasses RLS, but it is the ONLY place
 // privileged fields are set. Client-supplied roles/institution IDs are never trusted.
 const provisionDemoAccess = async (userId) => {
@@ -194,7 +213,7 @@ const provisionDemoAccess = async (userId) => {
   const { data: ownerRole, error: roleError } = await supabaseAdmin
     .from('roles')
     .select('id')
-    .eq('name', 'owner')
+    .eq('name', 'College Admin')
     .single();
 
   if (roleError) {
@@ -219,16 +238,18 @@ const provisionDemoAccess = async (userId) => {
 };
 
 const createDemoUser = async () => {
-  // Only allow in development
   if (env.isProduction) {
     throw new ApiError(403, 'Demo user creation is not allowed in production');
+  }
+  if (!env.demoEmail || !env.demoPassword) {
+    throw new ApiError(503, 'Demo access is not configured for this environment');
   }
 
   let userId;
 
   const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
-    email: DEMO_EMAIL,
-    password: DEMO_PASSWORD,
+    email: env.demoEmail,
+    password: env.demoPassword,
     email_confirm: true,
     // app_metadata is server-controlled: users cannot write to it themselves.
     app_metadata: { is_demo: true },
@@ -238,41 +259,27 @@ const createDemoUser = async () => {
   if (createError) {
     if (/already registered|already been registered/i.test(createError.message)) {
       const { data: list, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-      if (!listError) {
-        userId = list?.users?.find((u) => u.email?.toLowerCase() === DEMO_EMAIL)?.id;
-      }
+      if (listError) throw new ApiError(500, 'Unable to look up the configured demo account');
+      userId = list?.users?.find((u) => u.email?.toLowerCase() === env.demoEmail.toLowerCase())?.id;
     } else {
-      throw new ApiError(500, `Failed to create demo user: ${createError.message}`);
-    }
-  } else {
-    userId = created?.user?.id;
-  }
-
-  // Best-effort role/institution provisioning. If the Phase 0 migrations are not
-  // applied yet, the demo user can still sign in (auth works without profiles).
-  if (userId) {
-    try {
-      await provisionDemoAccess(userId);
-    } catch (error) {
-      if (!isMissingSchemaError(error)) {
-        console.error('Demo access provisioning failed:', error.message);
-      }
+      throw new ApiError(500, 'Unable to create the configured demo account');
     }
   }
 
-  return {
-    email: DEMO_EMAIL,
-    password: DEMO_PASSWORD,
-    name: DEMO_NAME,
-    message: 'Demo user ready',
-  };
+  userId = userId || created?.user?.id;
+  if (!userId) throw new ApiError(500, 'Unable to resolve the configured demo account');
+
+  await provisionDemoAccess(userId);
+  return login({ email: env.demoEmail, password: env.demoPassword });
 };
 
 module.exports = {
   register,
   login,
+  refreshSession,
+  logout,
   getProfile,
-  getRole,
+  getAuthorizationProfile,
   verifyToken,
   createDemoUser,
 };

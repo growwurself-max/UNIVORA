@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { academicAPI, feeAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { inputClass, apiError, money } from '../utils/helpers';
 import {
   Wallet,
@@ -15,7 +16,7 @@ import {
   Layers,
 } from 'lucide-react';
 
-const ADMIN_ROLES = ['owner', 'admin', 'super_admin'];
+const ADMIN_ROLES = ['owner', 'admin', 'super_admin', 'staff', 'accountant'];
 
 const emptyType = { name: '', code: '', description: '', status: 'active' };
 const emptyStructure = {
@@ -89,7 +90,7 @@ const Fees = () => {
       academicAPI.list('classes', { limit: 100 }).then((r) => r.data.data.items || []).catch(() => []),
       academicAPI.list('academic-years', { limit: 100 }).then((r) => r.data.data.items || []).catch(() => []),
       academicAPI.list('terms', { limit: 100 }).then((r) => r.data.data.items || []).catch(() => []),
-      academicAPI.list('students', { limit: 100 }).then((r) => r.data.data.items || []).catch(() => []),
+      feeAPI.students({ limit: 100 }).then((r) => r.data.data.items || []).catch(() => []),
       feeAPI.listTypes({ limit: 100 }).then((r) => r.data.data.items || []).catch(() => []),
       feeAPI.listStructures({ limit: 100 }).then((r) => r.data.data.items || []).catch(() => []),
     ]);

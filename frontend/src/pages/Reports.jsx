@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { academicAPI, feeAPI, payrollAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { inputClass, apiError, money, monthName, downloadCsv, printHtml, escapeHtml } from '../utils/helpers';
 import {
   FileText,
@@ -11,6 +12,7 @@ import {
   Inbox,
 } from 'lucide-react';
 
+const ADMIN_ROLES = ['owner', 'admin', 'super_admin'];
 const METHODS = ['cash', 'bank_transfer', 'card', 'cheque', 'online', 'other'];
 const methodLabel = (value) => String(value || '').replace(/_/g, ' ');
 const classLabel = (row) => (row?.section ? `${row.name} (${row.section})` : row?.name || '—');
@@ -18,6 +20,8 @@ const studentLabel = (row) =>
   `${row?.admission_number || ''} — ${[row?.first_name, row?.last_name].filter(Boolean).join(' ')}`.trim();
 
 const Reports = () => {
+  const { user } = useAuth();
+  const isAdmin = ADMIN_ROLES.includes(user?.profile?.role);
   const [tab, setTab] = useState('collections');
   const [lookups, setLookups] = useState({ classes: [], types: [], years: [] });
   const [error, setError] = useState('');
@@ -55,7 +59,7 @@ const Reports = () => {
         if (outstandingFilters.status) params.status = outstandingFilters.status;
         if (outstandingFilters.overdue) params.overdue = 'true';
         setOutstanding((await feeAPI.outstandingReport(params)).data.data);
-      } else {
+      } else if (isAdmin) {
         const params = {};
         if (payrollFilters.period_year) params.period_year = payrollFilters.period_year;
         if (payrollFilters.period_month) params.period_month = payrollFilters.period_month;
@@ -149,7 +153,7 @@ const Reports = () => {
   const tabs = [
     { key: 'collections', label: 'Collections' },
     { key: 'outstanding', label: 'Outstanding Fees' },
-    { key: 'payroll', label: 'Payroll' },
+    ...(isAdmin ? [{ key: 'payroll', label: 'Payroll' }] : []),
   ];
 
   return (
@@ -275,7 +279,7 @@ const Reports = () => {
         )}
 
         {/* Payroll */}
-        {tab === 'payroll' && (
+        {isAdmin && tab === 'payroll' && (
           <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-wrap items-end gap-3">
               <div><label className="block text-xs font-medium text-gray-500 mb-1">Year</label><input className={`${inputClass} max-w-[120px]`} type="number" min="2000" max="2100" value={payrollFilters.period_year} onChange={(e) => setPayrollFilters((p) => ({ ...p, period_year: e.target.value }))} /></div>

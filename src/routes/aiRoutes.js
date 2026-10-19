@@ -7,9 +7,6 @@ const env = require('../config/env');
 
 const router = express.Router();
 
-// Initialize the Google Gen AI (Gemini) client
-const ai = new GoogleGenAI({ apiKey: env.geminiApiKey });
-
 // AI Chat Endpoint
 router.post('/chat', authenticate, asyncHandler(async (req, res) => {
   const { message } = req.body;
@@ -21,6 +18,10 @@ router.post('/chat', authenticate, asyncHandler(async (req, res) => {
 
   if (message.length > 1000) {
     throw new ApiError(400, 'Message is too long. Please limit to 1000 characters.');
+  }
+
+  if (!env.geminiApiKey) {
+    throw new ApiError(503, 'The AI assistant is not configured. Please contact your administrator.');
   }
 
   // 2. Trusted Context Derivation
@@ -51,6 +52,7 @@ Constraints:
 
   try {
     // 3. Gemini API Call with Error Handling
+    const ai = new GoogleGenAI({ apiKey: env.geminiApiKey });
     const response = await ai.models.generateContent({
       model: env.geminiModel,
       contents: message,

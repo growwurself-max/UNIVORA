@@ -171,7 +171,7 @@ const SidebarContent = ({ role, user, onNavigate }) => {
               {user?.metadata?.name || user?.profile?.fullName || 'User'}
             </p>
             <p className="text-xs text-gray-500 truncate capitalize">
-              {role || user?.email || ''}
+              {user?.profile?.roleName || role || user?.email || ''}
             </p>
           </div>
         </div>
@@ -192,9 +192,15 @@ const AppLayout = () => {
     setOpen(false);
   }, [location.pathname]);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch {
+      navigate('/login', {
+        state: { notice: 'You are signed out on this device, but the server could not confirm session revocation.' },
+      });
+    }
   };
 
   return (

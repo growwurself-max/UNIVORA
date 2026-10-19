@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { authAPI } from '../services/api';
 import { BookOpen, Mail, Lock, AlertCircle, Loader2, Check } from 'lucide-react';
 
 const Login = () => {
+  const demoLoginEnabled = import.meta.env.VITE_ENABLE_DEMO_LOGIN === 'true';
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -12,8 +12,9 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, completeDemoLogin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleChange = (e) => {
     setFormData({
@@ -29,10 +30,10 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(formData.email, formData.password);
-      navigate('/dashboard');
+      const user = await login(formData.email, formData.password);
+      navigate(user.profile.role === 'super_admin' ? '/admin' : '/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(err.response?.data?.message || err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -43,11 +44,10 @@ const Login = () => {
     setDemoLoading(true);
 
     try {
-      await authAPI.setupDemoUser();
-      await login('demo@univora.dev', 'demo123');
-      navigate('/dashboard');
+      const user = await completeDemoLogin();
+      navigate(user.profile.role === 'super_admin' ? '/admin' : '/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Demo login failed. Please try again.');
+      setError(err.response?.data?.message || err.message || 'Demo login failed. Please try again.');
     } finally {
       setDemoLoading(false);
     }
@@ -104,6 +104,11 @@ const Login = () => {
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {location.state?.notice && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {location.state.notice}
+              </div>
+            )}
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start">
                 <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
@@ -157,22 +162,24 @@ const Login = () => {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || demoLoading}
               className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors"
             >
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Sign in
             </button>
 
-            <button
-              type="button"
-              onClick={handleDemoLogin}
-              disabled={demoLoading}
-              className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-colors"
-            >
-              {demoLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              Try the demo account
-            </button>
+            {demoLoginEnabled && (
+              <button
+                type="button"
+                onClick={handleDemoLogin}
+                disabled={demoLoading || loading}
+                className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                {demoLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Optional demo account (development only)
+              </button>
+            )}
 
             <div className="pt-1 text-center lg:text-left">
               <Link to="/register" className="text-sm text-primary-600 hover:text-primary-700 font-medium">

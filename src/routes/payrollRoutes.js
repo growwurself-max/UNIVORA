@@ -1,15 +1,18 @@
 const express = require('express');
 const payrollController = require('../controllers/payrollController');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, requireCollegeAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Payroll contains sensitive salary information and is restricted to
 // institution admins at both the route and RLS layers.
-const requireAdmin = authorize('owner', 'admin', 'super_admin');
+const requireAdmin = requireCollegeAdmin;
 
 router.use(authenticate);
 router.use(requireAdmin);
+
+// Employees available for salary structures (faculty + staff)
+router.get('/employees', payrollController.listEmployees);
 
 // Salary structures
 router.get('/structures', payrollController.listStructures);

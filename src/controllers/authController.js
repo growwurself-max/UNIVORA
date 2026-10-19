@@ -14,6 +14,16 @@ const login = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, 'Login successful', result));
 });
 
+const refresh = asyncHandler(async (req, res) => {
+  const result = await authService.refreshSession(req.body.refreshToken);
+  res.status(200).json(new ApiResponse(200, 'Session refreshed', result));
+});
+
+const logout = asyncHandler(async (req, res) => {
+  await authService.logout(req.accessToken);
+  res.status(200).json(new ApiResponse(200, 'Signed out successfully'));
+});
+
 const getMe = asyncHandler(async (req, res) => {
   const user = await authService.getProfile(req.user.id);
   res.status(200).json(new ApiResponse(200, 'Profile retrieved', { user }));
@@ -27,6 +37,8 @@ const createDemoUser = asyncHandler(async (req, res) => {
 module.exports = {
   register,
   login,
+  refresh,
+  logout,
   getMe,
   createDemoUser,
 };

@@ -16,11 +16,17 @@ const loginValidation = [
   body('password').notEmpty().withMessage('Password is required'),
 ];
 
+const refreshValidation = [
+  body('refreshToken').isString().trim().notEmpty().withMessage('Refresh token is required'),
+];
+
 const router = require('express').Router();
 const env = require('../config/env');
 
 router.post('/register', validate(registerValidation), authController.register);
 router.post('/login', validate(loginValidation), authController.login);
+router.post('/refresh', validate(refreshValidation), authController.refresh);
+router.post('/logout', authenticate, authController.logout);
 router.get('/me', authenticate, authController.getMe);
 
 // Demo user setup route (development only)

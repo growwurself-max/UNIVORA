@@ -1,12 +1,12 @@
 const express = require('express');
 const paymentController = require('../controllers/paymentController');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, requireAccountant } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Recording and voiding payments is restricted to institution admins. Reads are
 // available to staff (and a student for their own payments) via RLS.
-const requireAdmin = authorize('owner', 'admin', 'super_admin');
+const requireAdmin = requireAccountant;
 
 router.use(authenticate);
 

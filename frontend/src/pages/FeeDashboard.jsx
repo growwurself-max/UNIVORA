@@ -64,7 +64,7 @@ const FeeDashboard = () => {
     academicAPI.list('academic-years', { limit: 100 })
       .then((r) => setYears(r.data.data.items || []))
       .catch(() => setYears([]));
-    academicAPI.list('students', { limit: 100 })
+    feeAPI.students({ limit: 100 })
       .then((r) => setStudents(r.data.data.items || []))
       .catch(() => setStudents([]));
     loadDashboard();

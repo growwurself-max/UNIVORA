@@ -132,7 +132,6 @@ const RESOURCES = {
       department_id: { type: 'uuid' },
       status: statusField(['active', 'inactive', 'graduated', 'suspended', 'withdrawn']),
       admission_date: { type: 'date' },
-      profile_id: { type: 'uuid' },
     },
   },
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { academicAPI, payrollAPI } from '../services/api';
+import { payrollAPI } from '../services/api';
 import { inputClass, apiError, money, monthName } from '../utils/helpers';
 import {
   Banknote,
@@ -23,8 +23,16 @@ const currentYear = new Date().getFullYear();
 const facultyLabel = (row) =>
   `${row?.employee_id || ''} — ${[row?.first_name, row?.last_name].filter(Boolean).join(' ')}`.trim();
 
+const staffLabel = (row) => row?.full_name || row?.email || '—';
+
+const employeeName = (row) => {
+  if (row?.faculty) return facultyLabel(row.faculty);
+  if (row?.staff) return staffLabel(row.staff);
+  return '—';
+};
+
 const emptyStructure = {
-  faculty_id: '',
+  employee: '',
   name: '',
   base_salary: '',
   currency: 'USD',
@@ -55,7 +63,7 @@ const statusPill = (status) => {
 
 const Payroll = () => {
   const [tab, setTab] = useState('structures');
-  const [faculty, setFaculty] = useState([]);
+  const [employees, setEmployees] = useState({ faculty: [], staff: [] });
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
@@ -89,9 +97,9 @@ const Payroll = () => {
   };
 
   useEffect(() => {
-    academicAPI.list('faculty', { limit: 100 })
-      .then((r) => setFaculty(r.data.data.items || []))
-      .catch(() => setFaculty([]));
+    payrollAPI.listEmployees()
+      .then((r) => setEmployees(r.data.data || { faculty: [], staff: [] }))
+      .catch(() => setEmployees({ faculty: [], staff: [] }));
     loadStructures();
     loadRuns();
   }, []);
@@ -142,8 +150,9 @@ const Payroll = () => {
       notes: structureForm.notes || null,
       components: structureForm.components,
     };
-    if (structureForm.faculty_id) payload.faculty_id = structureForm.faculty_id;
-    else payload.faculty_id = null;
+    const [employeeType, employeeId] = structureForm.employee ? structureForm.employee.split(':') : ['', ''];
+    payload.faculty_id = employeeType === 'faculty' ? employeeId : null;
+    payload.profile_id = employeeType === 'staff' ? employeeId : null;
     if (structureForm.effective_from) payload.effective_from = structureForm.effective_from;
     run(async () => {
       if (editingStructure) await payrollAPI.updateStructure(editingStructure, payload);
@@ -156,7 +165,7 @@ const Payroll = () => {
   const startEditStructure = (row) => {
     setEditingStructure(row.id);
     setStructureForm({
-      faculty_id: row.faculty_id || '',
+      employee: row.faculty_id ? `faculty:${row.faculty_id}` : row.profile_id ? `staff:${row.profile_id}` : '',
       name: row.name || '',
       base_salary: row.base_salary ?? '',
       currency: row.currency || 'USD',
@@ -277,9 +286,18 @@ const Payroll = () => {
             <form onSubmit={submitStructure} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-3 h-fit">
               <h2 className="text-sm font-semibold text-gray-900">{editingStructure ? 'Edit salary structure' : 'New salary structure'}</h2>
               <input className={inputClass} placeholder="Name / grade" value={structureForm.name} onChange={(e) => setStructureForm((p) => ({ ...p, name: e.target.value }))} required />
-              <select className={inputClass} value={structureForm.faculty_id} onChange={(e) => setStructureForm((p) => ({ ...p, faculty_id: e.target.value }))}>
-                <option value="">Faculty (optional)</option>
-                {faculty.map((row) => <option key={row.id} value={row.id}>{facultyLabel(row)}</option>)}
+              <select className={inputClass} value={structureForm.employee} onChange={(e) => setStructureForm((p) => ({ ...p, employee: e.target.value }))} required>
+                <option value="">Select employee…</option>
+                {employees.faculty.length > 0 && (
+                  <optgroup label="Faculty">
+                    {employees.faculty.map((row) => <option key={row.id} value={`faculty:${row.id}`}>{facultyLabel(row)}</option>)}
+                  </optgroup>
+                )}
+                {employees.staff.length > 0 && (
+                  <optgroup label="Staff">
+                    {employees.staff.map((row) => <option key={row.id} value={`staff:${row.id}`}>{staffLabel(row)}</option>)}
+                  </optgroup>
+                )}
               </select>
               <div className="grid grid-cols-2 gap-3">
                 <input className={inputClass} type="number" step="0.01" min="0.01" placeholder="Base salary" value={structureForm.base_salary} onChange={(e) => setStructureForm((p) => ({ ...p, base_salary: e.target.value }))} required />
@@ -350,7 +368,7 @@ const Payroll = () => {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Name</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Faculty</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Employee</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Base</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Components</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
@@ -361,7 +379,7 @@ const Payroll = () => {
                       {structures.map((row) => (
                         <tr key={row.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.name}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{row.faculty ? facultyLabel(row.faculty) : '—'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{employeeName(row)}</td>
                           <td className="px-4 py-3 text-sm font-semibold text-gray-900">{money(row.base_salary, row.currency)}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{row.components?.length || 0}</td>
                           <td className="px-4 py-3"><span className={statusPill(row.status)}>{row.status}</span></td>
@@ -460,7 +478,7 @@ const Payroll = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Faculty</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Employee</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Base</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Allowances</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Deductions</th>
@@ -472,7 +490,7 @@ const Payroll = () => {
                       <tbody className="divide-y divide-gray-100">
                         {runDetail.records.map((row) => (
                           <tr key={row.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-sm text-gray-700">{row.faculty ? facultyLabel(row.faculty) : '—'}</td>
+                            <td className="px-4 py-3 text-sm text-gray-700">{employeeName(row)}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">{money(row.base_salary)}</td>
                             <td className="px-4 py-3 text-sm text-green-600">{money(row.allowances)}</td>
                             <td className="px-4 py-3 text-sm text-red-600">{money(row.deductions)}</td>

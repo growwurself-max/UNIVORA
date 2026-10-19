@@ -129,7 +129,8 @@ const countForInstitution = async (supabase, table, institutionId) => {
     .select('id', { count: 'exact', head: true })
     .eq('institution_id', institutionId);
 
-  return error ? 0 : count || 0;
+  if (error) throw error;
+  return count || 0;
 };
 
 const getInstitutionDetail = async ({ accessToken, id }) => {

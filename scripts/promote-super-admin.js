@@ -21,17 +21,18 @@ const fail = (message) => {
     fail('Usage: npm run promote:super-admin -- <email> [full name]');
   }
 
-  const { data: superAdminRole, error: roleError } = await supabaseAdmin
+  const { data: superAdminRoles, error: roleError } = await supabaseAdmin
     .from('roles')
-    .select('id')
-    .eq('name', 'super_admin')
-    .maybeSingle();
+    .select('id, name, rank')
+    .in('name', ['super_admin', 'Super Admin'])
+    .order('rank', { ascending: false });
 
   if (roleError) {
     fail(`Could not read roles: ${roleError.message}. Have the Phase 1 migrations been applied?`);
   }
+  const superAdminRole = superAdminRoles?.[0];
   if (!superAdminRole) {
-    fail('The "super_admin" role does not exist. Apply supabase/migrations/20261013000001_phase0_phase1_core.sql first.');
+    fail('The Super Admin role does not exist. Apply the core/RBAC Supabase migrations first.');
   }
 
   const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers();

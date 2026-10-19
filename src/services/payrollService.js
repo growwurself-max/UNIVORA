@@ -103,6 +103,50 @@ const loadComponentsByStructure = async (supabase, structureIds) => {
   return grouped;
 };
 
+// A salary structure / payslip must target exactly one employee: either a
+// faculty record or a staff profile (not both, not neither).
+const assertSingleEmployee = (facultyId, profileId) => {
+  const hasFaculty = Boolean(facultyId);
+  const hasProfile = Boolean(profileId);
+  if (hasFaculty === hasProfile) {
+    throw new ApiError(422, 'Validation failed', [
+      {
+        field: hasFaculty ? 'profile_id' : 'faculty_id',
+        message: 'Select exactly one employee (a faculty member or a staff member)',
+      },
+    ]);
+  }
+};
+
+// Employees that can be attached to a salary structure: faculty plus any
+// institution profile that is not a student and not already linked to a
+// faculty record (those are covered by the faculty list).
+const listEmployees = async ({ accessToken }) => {
+  const supabase = createUserClient(accessToken);
+
+  const { data: facultyRows, error: facultyError } = await supabase
+    .from('faculty')
+    .select('id, employee_id, first_name, last_name, profile_id')
+    .order('first_name', { ascending: true })
+    .limit(500);
+  if (facultyError) throw facultyError;
+
+  const { data: profileRows, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, full_name, email, role:roles!role_id ( name )')
+    .limit(500);
+  if (profileError) throw profileError;
+
+  const linkedProfileIds = new Set((facultyRows || []).map((row) => row.profile_id).filter(Boolean));
+  const excludedRoles = new Set(['student', 'pending']);
+
+  const staff = (profileRows || [])
+    .filter((row) => !linkedProfileIds.has(row.id) && !excludedRoles.has(row.role?.name))
+    .sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || '')));
+
+  return { faculty: facultyRows || [], staff };
+};
+
 const listSalaryStructures = async ({ accessToken, query }) => {
   const supabase = createUserClient(accessToken);
   const result = await listResource(supabase, SALARY_STRUCTURES, query);
@@ -123,6 +167,7 @@ const listSalaryStructures = async ({ accessToken, query }) => {
 const createSalaryStructure = async ({ accessToken, payload }) => {
   const supabase = createUserClient(accessToken);
   const row = normalizeFields(SALARY_STRUCTURES, payload, { partial: false });
+  assertSingleEmployee(row.faculty_id, row.profile_id);
   const components = normalizeComponents(payload.components);
 
   const { data: structure, error } = await supabase
@@ -149,6 +194,13 @@ const updateSalaryStructure = async ({ accessToken, id, payload }) => {
   const supabase = createUserClient(accessToken);
   const before = await resourceDetail(supabase, SALARY_STRUCTURES, id, 'Salary structure not found');
   const changes = normalizeFields(SALARY_STRUCTURES, payload, { partial: true });
+
+  // If the employee target is being changed, treat the payload as authoritative
+  // for both columns so a faculty <-> staff switch is unambiguous.
+  if ('faculty_id' in changes || 'profile_id' in changes) {
+    assertSingleEmployee(changes.faculty_id ?? null, changes.profile_id ?? null);
+  }
+
   const components = normalizeComponents(payload.components);
 
   let after = before;
@@ -442,6 +494,7 @@ const monthlyPayrollReport = async ({ accessToken, query = {} }) => {
 };
 
 module.exports = {
+  listEmployees,
   listSalaryStructures,
   createSalaryStructure,
   updateSalaryStructure,

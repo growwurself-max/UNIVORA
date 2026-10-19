@@ -5,8 +5,8 @@ Production-ready backend API with React + Vite frontend, powered by Supabase Aut
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js >= 18.0.0
-- Supabase project (configured in `.env`)
+- Node.js >= 20.0.0
+- Supabase project
 
 ### Installation
 
@@ -23,10 +23,12 @@ cd ..
 ```
 
 3. **Configure Environment**
-The `.env` file is already configured with Supabase credentials. For production, update:
+Copy `.env.example` to `.env` and configure:
 - `SUPABASE_URL` - Your Supabase project URL
 - `SUPABASE_ANON_KEY` - Supabase anon/public key
 - `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (backend only)
+- `CORS_ORIGIN` - Comma-separated trusted frontend origins (required in production)
+- `GEMINI_API_KEY` - Required only when enabling the AI assistant
 
 ### Running the Application
 
@@ -41,23 +43,15 @@ Backend runs on http://localhost:5000
 cd frontend
 npm run dev
 ```
-Frontend runs on http://localhost:5173
+Frontend runs on http://localhost:5174
 
 ## 🔐 Demo Login (Development Only)
 
-For local development, a demo user is available:
-
-**Demo Credentials:**
-- **Email:** `demo@univora.dev`
-- **Password:** `demo123`
-
-**Using Demo Login:**
-1. Navigate to http://localhost:5173/login
-2. Click the green "🎮 Demo Login (Development Only)" button
-3. The demo user will be automatically created (if needed) and logged in
-
-**Or Manual Login:**
-- Enter the demo credentials manually in the login form
+Demo access is an optional, explicitly triggered development feature. Configure
+`DEMO_EMAIL` and `DEMO_PASSWORD` in the backend `.env`; do not commit these
+values or set them in production. Set `VITE_ENABLE_DEMO_LOGIN=true` in
+`frontend/.env` to show its separate login button. Demo provisioning happens
+only after the button is clicked; ordinary sign-in is unaffected.
 
 **Important:**
 - Demo login is only available in development mode
@@ -116,7 +110,9 @@ univora/
 ## 🛠️ Development
 
 ### Email Confirmation
-In development mode, email confirmation is automatically skipped. In production, users must confirm their email before logging in.
+Email confirmation follows the Supabase Auth settings for the project. Configure
+local/test confirmation behavior in the local Supabase project, and require
+confirmed addresses in production.
 
 ### Demo User
 The demo user is created via Supabase Admin API with:
@@ -126,11 +122,15 @@ The demo user is created via Supabase Admin API with:
 
 ### Production Deployment
 Before deploying to production:
-1. Remove or disable demo login endpoint
-2. Enable email confirmation
-3. Update CORS origins
-4. Use environment-specific config
-5. Ensure service role key is never exposed
+1. Set `CORS_ORIGIN` to explicit trusted frontend origins.
+2. Enable email confirmation in Supabase Auth.
+3. Set `VITE_API_BASE_URL` to the deployed backend API.
+4. Configure Supabase Auth redirect URLs for the deployed frontend.
+5. Keep the service-role and Gemini keys on the backend only.
+6. Apply the reviewed SQL migrations in `supabase/migrations` in filename order
+   to staging, then production. Do not use `supabase db reset` on an existing
+   project. Confirm the deployed role names and institution assignments before
+   enabling user access.
 
 ## 📝 Scripts
 

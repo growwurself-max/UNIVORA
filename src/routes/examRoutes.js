@@ -1,13 +1,19 @@
 const express = require('express');
 const examController = require('../controllers/examController');
-const { authenticate, authorize } = require('../middleware/auth');
+const {
+  authenticate,
+  authorize,
+  requireCollegeAdmin,
+  requireExamCoordinator,
+} = require('../middleware/auth');
 
 const router = express.Router();
 
 // Exams and marks are managed by faculty and above; exam types and grading
 // scales are administrative configuration.
-const requireStaff = authorize('owner', 'admin', 'super_admin', 'faculty');
-const requireAdmin = authorize('owner', 'admin', 'super_admin');
+const requireStaff = authorize('Teacher', 'Exam Coordinator', 'College Admin', 'Super Admin');
+const requireAdmin = requireCollegeAdmin;
+const requireCoord = requireExamCoordinator;
 
 router.use(authenticate);
 
@@ -25,10 +31,10 @@ router.delete('/grading-scales/:id', requireAdmin, examController.removeGradingS
 
 // Exams
 router.get('/', examController.listExams);
-router.post('/', requireStaff, examController.createExam);
+router.post('/', requireCoord, examController.createExam);
 router.get('/:id', examController.examDetail);
 router.patch('/:id', requireStaff, examController.updateExam);
-router.delete('/:id', requireStaff, examController.removeExam);
+router.delete('/:id', requireAdmin, examController.removeExam);
 
 // Marks + exam-wise results
 router.get('/:id/marks', examController.listMarks);

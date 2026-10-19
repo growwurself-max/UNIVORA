@@ -1,5 +1,7 @@
 require('dotenv').config();
 
+const nodeEnv = process.env.NODE_ENV || 'development';
+
 const validateEnv = () => {
   const errors = [];
 
@@ -28,6 +30,11 @@ const validateEnv = () => {
     errors.push('SUPABASE_SERVICE_ROLE_KEY is required. Set your Supabase service role key in .env');
   }
 
+  const corsOrigin = process.env.CORS_ORIGIN?.trim();
+  if (nodeEnv === 'production' && (!corsOrigin || corsOrigin === '*' || corsOrigin.split(',').some((origin) => origin.trim() === '*'))) {
+    errors.push('CORS_ORIGIN must contain explicit trusted origins in production; wildcard origins are not allowed.');
+  }
+
   if (errors.length > 0) {
     console.error('\nUnivora API startup failed — configuration error:\n');
     errors.forEach((message) => console.error(`  • ${message}`));
@@ -39,13 +46,17 @@ const validateEnv = () => {
 validateEnv();
 
 const env = {
-  nodeEnv: process.env.NODE_ENV || 'development',
+  nodeEnv,
   port: Number(process.env.PORT) || 5000,
   supabaseUrl: process.env.SUPABASE_URL.trim(),
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY.trim(),
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY.trim(),
-  corsOrigin: process.env.CORS_ORIGIN || '*',
-  isProduction: process.env.NODE_ENV === 'production',
+  corsOrigin: process.env.CORS_ORIGIN?.trim() || '*',
+  isProduction: nodeEnv === 'production',
+  demoEmail: process.env.DEMO_EMAIL?.trim(),
+  demoPassword: process.env.DEMO_PASSWORD,
+  geminiApiKey: process.env.GEMINI_API_KEY?.trim(),
+  geminiModel: process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash',
 };
 
 module.exports = env;

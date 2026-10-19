@@ -91,9 +91,10 @@ const SALARY_STRUCTURES = {
   table: 'salary_structures',
   select:
     'id, institution_id, faculty_id, profile_id, name, base_salary, currency, pay_frequency, effective_from, status, notes, created_at, updated_at, ' +
-    'faculty:faculty!faculty_id ( id, employee_id, first_name, last_name )',
+    'faculty:faculty!faculty_id ( id, employee_id, first_name, last_name ), ' +
+    'staff:profiles!profile_id ( id, full_name, email )',
   searchable: ['name', 'notes'],
-  filters: ['status', 'faculty_id', 'pay_frequency'],
+  filters: ['status', 'faculty_id', 'profile_id', 'pay_frequency'],
   fields: {
     faculty_id: { type: 'uuid' },
     profile_id: { type: 'uuid' },
@@ -142,9 +143,10 @@ const PAYROLL_RECORDS = {
   table: 'payroll_records',
   select:
     'id, institution_id, payroll_run_id, faculty_id, profile_id, base_salary, allowances, deductions, net_salary, status, paid_at, notes, created_at, updated_at, ' +
-    'faculty:faculty!faculty_id ( id, employee_id, first_name, last_name )',
+    'faculty:faculty!faculty_id ( id, employee_id, first_name, last_name ), ' +
+    'staff:profiles!profile_id ( id, full_name, email )',
   searchable: ['notes'],
-  filters: ['payroll_run_id', 'status', 'faculty_id'],
+  filters: ['payroll_run_id', 'status', 'faculty_id', 'profile_id'],
   fields: {
     payroll_run_id: { type: 'uuid', required: true },
     faculty_id: { type: 'uuid' },

@@ -90,6 +90,14 @@ const listAssignments = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, 'Fee assignments retrieved', result));
 });
 
+const listStudents = asyncHandler(async (req, res) => {
+  const result = await feeService.listStudentsForFees({
+    institutionId: req.user.profile?.institution_id,
+    query: req.query,
+  });
+  res.status(200).json(new ApiResponse(200, 'Students available for fee management retrieved', result));
+});
+
 const assignmentDetail = asyncHandler(async (req, res) => {
   const record = await feeService.assignmentDetail({ accessToken: req.accessToken, id: req.params.id });
   res.status(200).json(new ApiResponse(200, 'Fee assignment retrieved', record));
@@ -163,6 +171,7 @@ module.exports = {
   updateStructure,
   removeStructure,
   listAssignments,
+  listStudents,
   assignmentDetail,
   createAssignment,
   bulkAssign,

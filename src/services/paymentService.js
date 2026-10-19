@@ -2,7 +2,7 @@ const ApiError = require('../utils/ApiError');
 const { createUserClient } = require('../config/supabase');
 const { normalizeFields, sanitizeSearch, parseListParams } = require('./resourceService');
 const { PAYMENTS } = require('../config/fees');
-const { toNumber, round2 } = require('./feeService');
+const { toNumber, round2, attachFinanceStudents } = require('./feeService');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -38,7 +38,7 @@ const listPayments = async ({ accessToken, query = {} }) => {
   if (error) throw error;
 
   return {
-    items: data || [],
+    items: await attachFinanceStudents(supabase, data || []),
     total: count || 0,
     page,
     limit,
@@ -56,7 +56,7 @@ const paymentDetail = async ({ accessToken, id }) => {
 
   if (error) throw error;
   if (!data) throw new ApiError(404, 'Payment not found');
-  return data;
+  return attachFinanceStudents(supabase, data);
 };
 
 // Guards against accidental double-entry: the same amount/method for a fee, on
@@ -141,7 +141,7 @@ const recordPayment = async ({ accessToken, payload, actorId }) => {
     .single();
 
   if (error) throw error;
-  return data;
+  return attachFinanceStudents(supabase, data);
 };
 
 const removePayment = async ({ accessToken, id }) => {
