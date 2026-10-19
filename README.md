@@ -124,7 +124,9 @@ The demo user is created via Supabase Admin API with:
 Before deploying to production:
 1. Set `CORS_ORIGIN` to explicit trusted frontend origins.
 2. Enable email confirmation in Supabase Auth.
-3. Set `VITE_API_BASE_URL` to the deployed backend API.
+3. The frontend calls `/api/v1` on the same domain; Vercel routes `/api/*`
+   requests to the Express service. Set `VITE_API_BASE_URL` only if using a
+   separate backend domain.
 4. Configure Supabase Auth redirect URLs for the deployed frontend.
 5. Keep the service-role and Gemini keys on the backend only.
 6. Apply the reviewed SQL migrations in `supabase/migrations` in filename order
