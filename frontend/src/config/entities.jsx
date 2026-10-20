@@ -96,8 +96,8 @@ export const ENTITIES = {
     ],
     filters: [],
     fields: [
-      { name: 'name', label: 'Name', input: 'text', required: true },
-      { name: 'code', label: 'Code', input: 'text' },
+      { name: 'name', label: 'Name', input: 'text', required: true, maxLength: 150 },
+      { name: 'code', label: 'Code', input: 'text', maxLength: 30 },
     ],
   },
 

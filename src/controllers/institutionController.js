@@ -80,6 +80,30 @@ const update = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, 'Institution updated', after));
 });
 
+const remove = asyncHandler(async (req, res) => {
+  const { before, after, changes } = await institutionService.deactivateInstitution({
+    accessToken: req.accessToken,
+    id: req.params.id,
+  });
+
+  if (Object.keys(changes).length > 0) {
+    await auditService.logAction({
+      actorId: req.user.id,
+      action: 'institution.deactivate',
+      entityType: 'institution',
+      entityId: after.id,
+      oldValue: before,
+      newValue: after,
+      metadata: { method: 'soft-delete', recordsPreserved: true },
+      ip: req.ip,
+    });
+  }
+
+  res.status(200).json(
+    new ApiResponse(200, 'Institution deactivated; its academic and account records were preserved', after)
+  );
+});
+
 const setStatus = asyncHandler(async (req, res) => {
   const { before, after } = await institutionService.updateInstitution({
     accessToken: req.accessToken,
@@ -101,4 +125,4 @@ const setStatus = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, `Institution ${after.status}`, after));
 });
 
-module.exports = { list, stats, detail, create, update, setStatus };
+module.exports = { list, stats, detail, create, update, remove, setStatus };

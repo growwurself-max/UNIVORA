@@ -31,8 +31,12 @@ const sanitizeSearch = (value) =>
 const normalizePayload = (payload, { partial }) => {
   const changes = {};
 
-  if (payload.name !== undefined) changes.name = String(payload.name).trim();
-  if (payload.slug !== undefined) changes.slug = String(payload.slug).trim().toLowerCase();
+  if (payload.name !== undefined) {
+    changes.name = payload.name === null ? '' : String(payload.name).trim();
+  }
+  if (payload.slug !== undefined) {
+    changes.slug = payload.slug === null ? '' : String(payload.slug).trim().toLowerCase();
+  }
   if (payload.domain !== undefined) {
     const domain = payload.domain === null ? '' : String(payload.domain).trim();
     changes.domain = domain || null;
@@ -197,6 +201,9 @@ const updateInstitution = async ({ accessToken, id, payload }) => {
   return { before, after, changes };
 };
 
+const deactivateInstitution = ({ accessToken, id }) =>
+  updateInstitution({ accessToken, id, payload: { status: 'suspended' } });
+
 module.exports = {
   SUBSCRIPTION_PLANS,
   STATUSES,
@@ -206,4 +213,5 @@ module.exports = {
   getInstitutionDetail,
   createInstitution,
   updateInstitution,
+  deactivateInstitution,
 };

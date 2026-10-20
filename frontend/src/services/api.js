@@ -23,6 +23,7 @@ api.interceptors.request.use(
 
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
+  resendVerification: (data) => api.post('/auth/resend-verification', data),
   login: (data) => api.post('/auth/login', data),
   refresh: (data) => api.post('/auth/refresh', data),
   logout: () => api.post('/auth/logout'),
@@ -36,7 +37,7 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const request = error.config;
-    const authEndpoint = /\/auth\/(login|register|refresh|logout)(\?|$)/.test(request?.url || '');
+    const authEndpoint = /\/auth\/(login|register|resend-verification|refresh|logout)(\?|$)/.test(request?.url || '');
     if (error.response?.status !== 401 || !request || request._retried || authEndpoint) {
       return Promise.reject(error);
     }
@@ -234,6 +235,7 @@ export const adminAPI = {
   getInstitution: (id) => api.get(`/institutions/${id}`),
   createInstitution: (data) => api.post('/institutions', data),
   updateInstitution: (id, data) => api.patch(`/institutions/${id}`, data),
+  deleteInstitution: (id) => api.delete(`/institutions/${id}`),
   setInstitutionStatus: (id, status, reason) =>
     api.patch(`/institutions/${id}/status`, { status, reason }),
 };

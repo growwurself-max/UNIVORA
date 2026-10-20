@@ -16,7 +16,7 @@ import {
   Inbox,
 } from 'lucide-react';
 
-const ADMIN_ROLES = ['owner', 'admin', 'super_admin'];
+const ADMIN_ROLES = ['owner', 'admin', 'college_admin', 'super_admin'];
 
 const STATUS_STYLES = {
   active: 'bg-green-50 text-green-700 border-green-200',
@@ -63,11 +63,13 @@ const buildFormFromRow = (entity, row) => {
 const ResourceManager = ({ resource }) => {
   const entity = ENTITIES[resource];
   const { user } = useAuth();
-  const isAdmin = ADMIN_ROLES.includes(user?.profile?.role);
+  const normalizedRole = user?.profile?.role?.toLowerCase().replace(/[\s-]+/g, '_');
+  const isAdmin = ADMIN_ROLES.includes(normalizedRole);
 
   const [data, setData] = useState({ items: [], total: 0, page: 1, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filters, setFilters] = useState({});
@@ -88,6 +90,7 @@ const ResourceManager = ({ resource }) => {
     setFilters({});
     setPage(1);
     setError('');
+    setNotice('');
   }, [resource]);
 
   useEffect(() => {
@@ -181,6 +184,7 @@ const ResourceManager = ({ resource }) => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (saving) return;
     setSaving(true);
     setFormError('');
     setFormErrors([]);
@@ -190,10 +194,14 @@ const ResourceManager = ({ resource }) => {
       const value = form[field.name];
       if (field.input === 'checkbox') {
         payload[field.name] = Boolean(value);
-      } else if (value === '' || value === undefined) {
-        payload[field.name] = null;
+      } else if (value === '' || value === undefined || value === null) {
+        if (field.required) {
+          payload[field.name] = '';
+        } else if (editing) {
+          payload[field.name] = null;
+        }
       } else {
-        payload[field.name] = value;
+        payload[field.name] = typeof value === 'string' ? value.trim() : value;
       }
     });
 
@@ -204,6 +212,7 @@ const ResourceManager = ({ resource }) => {
         await academicAPI.create(resource, payload);
       }
       setModalOpen(false);
+      setNotice(`${entity.singular} ${editing ? 'updated' : 'created'} successfully.`);
       await fetchList();
     } catch (err) {
       const body = err.response?.data;
@@ -220,8 +229,10 @@ const ResourceManager = ({ resource }) => {
     }
     setDeletingId(row.id);
     setError('');
+    setNotice('');
     try {
       await academicAPI.remove(resource, row.id);
+      setNotice(`${entity.singular} deleted successfully.`);
       await fetchList();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to delete record');
@@ -297,6 +308,8 @@ const ResourceManager = ({ resource }) => {
       <input
         type={field.input || 'text'}
         value={value}
+        required={Boolean(field.required)}
+        maxLength={field.maxLength}
         step={field.step}
         min={field.min}
         onChange={(event) => setField(field.name, event.target.value)}
@@ -338,6 +351,15 @@ const ResourceManager = ({ resource }) => {
         <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start">
           <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
           <span className="text-sm">{error}</span>
+        </div>
+      )}
+
+      {notice && (
+        <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+          <span className="text-sm">{notice}</span>
+          <button onClick={() => setNotice('')} className="text-sm font-medium hover:underline">
+            Dismiss
+          </button>
         </div>
       )}
 

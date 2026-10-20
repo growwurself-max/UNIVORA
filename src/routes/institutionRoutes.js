@@ -16,7 +16,7 @@ const commonRules = [
   body('slug')
     .optional(optional)
     .trim()
-    .matches(/^[a-z0-9][a-z0-9-]{0,48}[a-z0-9]$/)
+    .matches(/^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])?$/)
     .withMessage('Slug must be lowercase letters, numbers, and hyphens'),
   body('domain').optional(optional).trim().isLength({ max: 255 }),
   body('status')
@@ -56,5 +56,6 @@ router.post('/', validate(createValidation), institutionController.create);
 router.get('/:id', institutionController.detail);
 router.patch('/:id/status', validate(statusValidation), institutionController.setStatus);
 router.patch('/:id', validate(updateValidation), institutionController.update);
+router.delete('/:id', institutionController.remove);
 
 module.exports = router;

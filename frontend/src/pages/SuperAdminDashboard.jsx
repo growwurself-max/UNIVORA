@@ -8,6 +8,7 @@ import {
   Search,
   Pencil,
   Power,
+  Trash2,
   Eye,
   CheckCircle2,
   XCircle,
@@ -30,6 +31,15 @@ import {
 
 const PLANS = ['free', 'basic', 'pro', 'enterprise'];
 const STATUSES = ['active', 'suspended'];
+
+const getErrorMessage = (error, fallback) => {
+  const body = error.response?.data;
+  const details = body?.data?.errors;
+  const detailText = Array.isArray(details)
+    ? details.map((item) => [item.field, item.message].filter(Boolean).join(': ')).join(' · ')
+    : '';
+  return [body?.message || fallback, detailText].filter(Boolean).join(': ');
+};
 
 const planStyles = {
   free: 'bg-gray-100 text-gray-700 border-gray-200',
@@ -99,11 +109,13 @@ function InstitutionFormModal({ open, mode, initial, onClose, onSaved }) {
     name: '',
     slug: '',
     domain: '',
+    subscription_expires_at: '',
     status: 'active',
     subscription_plan: 'free',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [errorDetails, setErrorDetails] = useState([]);
 
   useEffect(() => {
     if (open) {
@@ -111,10 +123,12 @@ function InstitutionFormModal({ open, mode, initial, onClose, onSaved }) {
         name: initial?.name || '',
         slug: initial?.slug || '',
         domain: initial?.domain || '',
+        subscription_expires_at: initial?.subscription_expires_at || '',
         status: initial?.status || 'active',
         subscription_plan: initial?.subscription_plan || 'free',
       });
       setError('');
+      setErrorDetails([]);
       setSaving(false);
     }
   }, [open, initial]);
@@ -140,42 +154,54 @@ function InstitutionFormModal({ open, mode, initial, onClose, onSaved }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (saving) return;
     setSaving(true);
     setError('');
+    setErrorDetails([]);
 
     try {
       const payload = {
         name: form.name,
         slug: form.slug,
         domain: form.domain,
+        subscription_expires_at: form.subscription_expires_at,
         status: form.status,
         subscription_plan: form.subscription_plan,
       };
       if (!payload.slug) delete payload.slug;
-      if (!payload.domain) delete payload.domain;
+      if (!payload.domain) {
+        if (mode === 'create') delete payload.domain;
+        else payload.domain = null;
+      }
+      if (!payload.subscription_expires_at) {
+        if (mode === 'create') delete payload.subscription_expires_at;
+        else payload.subscription_expires_at = null;
+      }
 
       if (mode === 'create') {
         await adminAPI.createInstitution(payload);
       } else {
         await adminAPI.updateInstitution(initial.id, payload);
       }
-      onSaved();
+      await onSaved(mode);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save institution');
+      setError(getErrorMessage(err, 'Failed to save institution'));
+      const details = err.response?.data?.data?.errors;
+      setErrorDetails(Array.isArray(details) ? details : []);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={saving ? undefined : onClose} />
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">
             {mode === 'create' ? 'New Institution' : 'Edit Institution'}
           </h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+          <button onClick={onClose} disabled={saving} className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-50">
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
@@ -184,7 +210,18 @@ function InstitutionFormModal({ open, mode, initial, onClose, onSaved }) {
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start">
               <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
-              <span className="text-sm">{error}</span>
+              <div className="text-sm">
+                <p>{error}</p>
+                {errorDetails.length > 0 && (
+                  <ul className="mt-2 list-disc pl-5">
+                    {errorDetails.map((item, index) => (
+                      <li key={`${item.field || 'error'}-${index}`}>
+                        {[item.field, item.message].filter(Boolean).join(': ')}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           )}
 
@@ -208,6 +245,7 @@ function InstitutionFormModal({ open, mode, initial, onClose, onSaved }) {
               name="slug"
               value={form.slug}
               onChange={handleChange}
+              maxLength={50}
               placeholder="state-university"
               className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
@@ -220,7 +258,19 @@ function InstitutionFormModal({ open, mode, initial, onClose, onSaved }) {
               name="domain"
               value={form.domain}
               onChange={handleChange}
+              maxLength={255}
               placeholder="state-university.edu"
+              className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Subscription expiry</label>
+            <input
+              type="date"
+              name="subscription_expires_at"
+              value={form.subscription_expires_at}
+              onChange={handleChange}
               className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -262,6 +312,7 @@ function InstitutionFormModal({ open, mode, initial, onClose, onSaved }) {
             <button
               type="button"
               onClick={onClose}
+              disabled={saving}
               className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Cancel
@@ -323,9 +374,9 @@ function InstitutionDetailModal({ institutionId, onClose }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg">
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Institution Details</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
@@ -360,16 +411,16 @@ function InstitutionDetailModal({ institutionId, onClose }) {
                   <dd className="text-gray-900">{institution.domain || '—'}</dd>
                 </div>
                 <div>
+                  <dt className="text-gray-500">Subscription ends</dt>
+                  <dd className="text-gray-900">{formatDate(institution.subscription_expires_at)}</dd>
+                </div>
+                <div>
                   <dt className="text-gray-500">Plan</dt>
                   <dd><PlanBadge plan={institution.subscription_plan} /></dd>
                 </div>
                 <div>
                   <dt className="text-gray-500">Created</dt>
                   <dd className="text-gray-900">{formatDate(institution.created_at)}</dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500">Subscription ends</dt>
-                  <dd className="text-gray-900">{formatDate(institution.subscription_expires_at)}</dd>
                 </div>
               </dl>
 
@@ -395,6 +446,7 @@ function SuperAdminDashboard() {
   const navigate = useNavigate();
 
   const [stats, setStats] = useState(null);
+  const [statsError, setStatsError] = useState('');
   const [data, setData] = useState({ items: [], total: 0, page: 1, totalPages: 1, limit: 10 });
   const [listLoading, setListLoading] = useState(true);
   const [error, setError] = useState('');
@@ -406,6 +458,9 @@ function SuperAdminDashboard() {
   const [modal, setModal] = useState({ open: false, mode: 'create', institution: null });
   const [detailId, setDetailId] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [deactivationTarget, setDeactivationTarget] = useState(null);
+  const [deactivating, setDeactivating] = useState(false);
+  const [notice, setNotice] = useState('');
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -417,11 +472,12 @@ function SuperAdminDashboard() {
   }, [debouncedSearch, statusFilter, planFilter]);
 
   const loadStats = useCallback(async () => {
+    setStatsError('');
     try {
       const response = await adminAPI.getStats();
       setStats(response.data.data);
-    } catch {
-      // statistics are non-critical; keep the last known values
+    } catch (err) {
+      setStatsError(getErrorMessage(err, 'Failed to load institution statistics'));
     }
   }, []);
 
@@ -434,9 +490,14 @@ function SuperAdminDashboard() {
       if (statusFilter) params.status = statusFilter;
       if (planFilter) params.subscription_plan = planFilter;
       const response = await adminAPI.listInstitutions(params);
-      setData(response.data.data);
+      const result = response.data.data;
+      if (result.page > result.totalPages) {
+        setPage(result.totalPages);
+      } else {
+        setData(result);
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load institutions');
+      setError(getErrorMessage(err, 'Failed to load institutions'));
     } finally {
       setListLoading(false);
     }
@@ -461,20 +522,47 @@ function SuperAdminDashboard() {
 
   const toggleStatus = async (institution) => {
     const target = institution.status === 'active' ? 'suspended' : 'active';
+    if (busyId) return;
     setBusyId(institution.id);
     setError('');
+    setNotice('');
     try {
       await adminAPI.setInstitutionStatus(institution.id, target);
       await refreshAll();
+      setNotice(`Institution ${target === 'active' ? 'activated' : 'deactivated'} successfully.`);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update status');
+      setError(getErrorMessage(err, 'Failed to update status'));
     } finally {
       setBusyId(null);
     }
   };
 
-  const openCreate = () => setModal({ open: true, mode: 'create', institution: null });
-  const openEdit = (institution) => setModal({ open: true, mode: 'edit', institution });
+  const handleDeactivate = async () => {
+    if (!deactivationTarget || deactivating) return;
+    setDeactivating(true);
+    setError('');
+    setNotice('');
+    try {
+      await adminAPI.deleteInstitution(deactivationTarget.id);
+      const name = deactivationTarget.name;
+      setDeactivationTarget(null);
+      await refreshAll();
+      setNotice(`${name} was deactivated. Academic, student, staff, fee, and examination records were preserved.`);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to deactivate institution'));
+    } finally {
+      setDeactivating(false);
+    }
+  };
+
+  const openCreate = () => {
+    setNotice('');
+    setModal({ open: true, mode: 'create', institution: null });
+  };
+  const openEdit = (institution) => {
+    setNotice('');
+    setModal({ open: true, mode: 'edit', institution });
+  };
   const closeModal = () => setModal((current) => ({ ...current, open: false }));
 
   return (
@@ -525,6 +613,15 @@ function SuperAdminDashboard() {
           </button>
         </div>
 
+        {notice && (
+          <div className="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-start justify-between gap-3">
+            <p className="text-sm">{notice}</p>
+            <button onClick={() => setNotice('')} className="text-sm font-medium hover:underline">
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start">
             <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
@@ -538,6 +635,11 @@ function SuperAdminDashboard() {
           <StatCard label="Suspended" value={stats?.suspended ?? '—'} icon={XCircle} color="bg-red-500" />
           <StatCard label="Added (30d)" value={stats?.addedLast30Days ?? '—'} icon={TrendingUp} color="bg-indigo-500" />
         </div>
+        {statsError && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm">
+            {statsError}
+          </div>
+        )}
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <h3 className="text-sm font-semibold text-gray-900 mb-4">Subscription Plans</h3>
@@ -681,20 +783,31 @@ function SuperAdminDashboard() {
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => toggleStatus(institution)}
-                            disabled={busyId === institution.id}
-                            title={institution.status === 'active' ? 'Suspend' : 'Activate'}
-                            className={`p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 ${
-                              institution.status === 'active' ? 'text-red-500' : 'text-green-600'
-                            }`}
-                          >
-                            {busyId === institution.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Power className="w-4 h-4" />
-                            )}
-                          </button>
+                          {institution.status === 'active' ? (
+                            <button
+                              onClick={() => setDeactivationTarget(institution)}
+                              disabled={Boolean(busyId) || deactivating}
+                              title="Deactivate institution"
+                              aria-label={`Deactivate ${institution.name}`}
+                              className="p-2 rounded-lg text-red-600 hover:bg-red-50 disabled:opacity-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => toggleStatus(institution)}
+                              disabled={Boolean(busyId)}
+                              title="Activate"
+                              aria-label={`Activate ${institution.name}`}
+                              className="p-2 rounded-lg text-green-600 hover:bg-green-50 disabled:opacity-50"
+                            >
+                              {busyId === institution.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Power className="w-4 h-4" />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -737,12 +850,63 @@ function SuperAdminDashboard() {
         mode={modal.mode}
         initial={modal.institution}
         onClose={closeModal}
-        onSaved={async () => {
+        onSaved={async (mode) => {
           closeModal();
           await refreshAll();
+          setNotice(mode === 'create' ? 'Institution created successfully.' : 'Institution updated successfully.');
         }}
       />
       <InstitutionDetailModal institutionId={detailId} onClose={() => setDetailId(null)} />
+
+      {deactivationTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
+          <button
+            type="button"
+            aria-label="Close confirmation"
+            disabled={deactivating}
+            onClick={() => setDeactivationTarget(null)}
+            className="absolute inset-0 bg-black/50"
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="deactivate-institution-title"
+            className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+          >
+            <h2 id="deactivate-institution-title" className="text-lg font-semibold text-gray-900">
+              Deactivate {deactivationTarget.name}?
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-gray-600">
+              This will suspend platform access, but will not permanently delete the institution or any associated
+              academic, student, staff, fee, or examination records. You can reactivate it later.
+            </p>
+            {error && (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setDeactivationTarget(null)}
+                disabled={deactivating}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeactivate}
+                disabled={deactivating}
+                className="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deactivating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {deactivating ? 'Deactivating...' : 'Deactivate institution'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

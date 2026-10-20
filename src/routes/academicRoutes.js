@@ -5,11 +5,21 @@ const {
   requireCollegeAdmin,
   requireRecordsManager,
 } = require('../middleware/auth');
+const ApiError = require('../utils/ApiError');
 const resourceController = require('../controllers/resourceController');
 
 // Any authenticated member of an institution may read (RLS scopes rows to the
 // caller's own institution). Only authorized staff may mutate.
 const requireAdmin = requireCollegeAdmin;
+
+const requireInstitutionContext = (req, res, next) => {
+  if (!req.user.profile?.institution_id) {
+    return next(
+      new ApiError(403, 'Your account must be assigned to an institution to manage academic records')
+    );
+  }
+  return next();
+};
 
 const READ_ROLES = {
   departments: ['College Admin', 'Super Admin', 'Student Records Manager', 'Department Head'],
@@ -41,9 +51,15 @@ router.get('/:resource', requireResourceReader, resourceController.list);
 router.post('/:resource', (req, res, next) => {
   const resource = req.params.resource;
   if (resource === 'students') {
-    return requireRecordsManager(req, res, next);
+    return requireRecordsManager(req, res, (error) => {
+      if (error) return next(error);
+      return requireInstitutionContext(req, res, next);
+    });
   }
-  return requireAdmin(req, res, next);
+  return requireAdmin(req, res, (error) => {
+    if (error) return next(error);
+    return requireInstitutionContext(req, res, next);
+  });
 }, resourceController.create);
 
 router.get('/:resource/:id', requireResourceReader, resourceController.detail);
@@ -51,16 +67,28 @@ router.get('/:resource/:id', requireResourceReader, resourceController.detail);
 router.patch('/:resource/:id', (req, res, next) => {
   const resource = req.params.resource;
   if (resource === 'students') {
-    return requireRecordsManager(req, res, next);
+    return requireRecordsManager(req, res, (error) => {
+      if (error) return next(error);
+      return requireInstitutionContext(req, res, next);
+    });
   }
-  return requireAdmin(req, res, next);
+  return requireAdmin(req, res, (error) => {
+    if (error) return next(error);
+    return requireInstitutionContext(req, res, next);
+  });
 }, resourceController.update);
 
 router.delete('/:resource/:id', (req, res, next) => {
   if (req.params.resource === 'students') {
-    return requireRecordsManager(req, res, next);
+    return requireRecordsManager(req, res, (error) => {
+      if (error) return next(error);
+      return requireInstitutionContext(req, res, next);
+    });
   }
-  return requireAdmin(req, res, next);
+  return requireAdmin(req, res, (error) => {
+    if (error) return next(error);
+    return requireInstitutionContext(req, res, next);
+  });
 }, resourceController.remove);
 
 module.exports = router;
